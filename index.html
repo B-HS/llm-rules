@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko" class="scroll-smooth">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+        <title>코딩 컨벤션 · LLM Rules</title>
+        <meta
+            name="description"
+            content="개인 프로젝트 전반에 적용하는 표준 코딩 컨벤션 — 공통 · 프론트엔드 · FSD · 백엔드 · 데스크톱" />
+        <script>
+            ;(() => {
+                try {
+                    const stored = localStorage.getItem('theme')
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+                    const isDark = stored ? stored === 'dark' : prefersDark
+                    document.documentElement.classList.toggle('dark', isDark)
+                    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+                } catch {}
+            })()
+        </script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>
