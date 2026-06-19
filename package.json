@@ -8,7 +8,8 @@
     "build": "vite-react-ssg build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "sync": "bun run scripts/sync-claude-md.ts"
+    "sync": "bun run scripts/sync-claude-md.ts",
+    "init-agents": "bun run scripts/init-agents.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

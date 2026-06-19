@@ -20,12 +20,14 @@ const CONVENTION_DIR = fileURLToPath(new URL('../docs/convention', import.meta.u
 
 const GITHUB_REPO = process.env.GITHUB_REPO ?? 'B-HS/llm-rules'
 
-const ORDER: Record<string, number> = { index: 0, 'ai-process': 1, common: 2, comments: 3, frontend: 4, fsd: 5, query: 6, backend: 7, desktop: 8 }
+const ORDER: Record<string, number> = { index: 0, 'ai-process': 1, common: 2, comments: 3, security: 4, git: 5, frontend: 6, fsd: 7, query: 8, backend: 9, desktop: 10 }
 const LABELS: Record<string, string> = {
     index: '개요',
     'ai-process': 'AI 프로세스',
     common: '공통',
     comments: '주석',
+    security: '보안',
+    git: 'Git · 커밋',
     frontend: '프론트엔드',
     fsd: 'FSD 아키텍처',
     query: 'TanStack Query',

@@ -6,7 +6,7 @@ export CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 export TARGET="$CLAUDE_DIR/CLAUDE.md"
 export DEST="$CLAUDE_DIR/convention"
 export MODE="${LLM_RULES_MODE:-}"
-export DOCS="index ai-process common comments frontend fsd query backend desktop"
+export DOCS="index ai-process common comments security git frontend fsd query backend desktop"
 
 echo "▶ LLM Rules 컨벤션 설치"
 echo "  소스 : $BASE_URL/docs/convention"
@@ -88,4 +88,4 @@ else:
     sys.stderr.write("  ✓ CLAUDE.md 이미 최신 (변경 없음)\n")
 PY
 
-echo "✓ 설치 완료 — ~/.claude/CLAUDE.md 가 컨벤션(9개 문서)을 참조합니다."
+echo "✓ 설치 완료 — ~/.claude/CLAUDE.md 가 컨벤션($(echo $DOCS | wc -w | tr -d ' ')개 문서)을 참조합니다."

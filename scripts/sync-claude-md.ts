@@ -93,7 +93,7 @@ if (!(await Bun.file(resolve(srcConventionDir, 'index.md')).exists())) {
 }
 
 // 문서 순서: index 우선 → 정해진 순서 → 나머지 알파벳
-const DOC_ORDER = ['index', 'ai-process', 'common', 'comments', 'frontend', 'fsd', 'query', 'backend', 'desktop']
+const DOC_ORDER = ['index', 'ai-process', 'common', 'comments', 'security', 'git', 'frontend', 'fsd', 'query', 'backend', 'desktop']
 const orderOf = (file: string) => {
     const i = DOC_ORDER.indexOf(file.replace(/\.md$/, ''))
     return i === -1 ? DOC_ORDER.length : i
