@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "sync": "bun run scripts/sync-claude-md.ts",
-    "init-agents": "bun run scripts/init-agents.ts"
+    "init-agents": "bun run scripts/init-agents.ts",
+    "install-claude-code": "bun run scripts/install-claude-code.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

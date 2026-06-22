@@ -83,3 +83,16 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
     - `install-files/init-agents.sh` 신설 — curl 원격판(GitHub raw → CWD). LLM_RULES_TARGET/NO_CURSOR/NO_AGENTS.
     - `package.json` scripts.init-agents 추가. README "다른 에이전트" 섹션 추가.
     - 검증: bun 생성(AGENTS.md 80KB·마커·11문서)·멱등 재실행·사용자 콘텐츠 보존(마커 1쌍)·curl(file:// 로컬) 전부 통과. opencode 제외(CLAUDE.md fallback).
+
+---
+
+## 작업: Claude Code 전용 에디션 (docs/claudecode/) + 설치 메뉴
+
+사용자 요청 — 컨벤션 각 .md 에서 언급 가능한 Claude Code 기능(hook·command·subagent·settings·output-style)을 전부 활용하는 CC 전용 docs 를 `docs/claudecode/` 에 완성하고, CLI 설치 메뉴로 설치 가능하게. 선행: 13개 .md 전수 검사(hook-enforce/augment/other/prose 분류) + 공식 hooks 스펙(code.claude.com/docs/en/hooks) WebFetch 검증(에이전트 초안의 camelCase·blockingMode·exit code 오류 교정).
+
+- [x] **자산(assets) — 직접 작성·검증**: `docs/claudecode/assets/settings.json`(PascalCase 이벤트, matcher=도구명, `if`로 git 한정, permissions allow/ask/deny) + hook 6종(guard-commit·lint-edit·scan-secrets·verify-on-stop·session-context·reinject-rules) + output-style(llm-rules). hook 은 `bash -n` 문법 + 기능 스모크테스트 통과(Co-Authored-By/형식위반/main 차단, useCallback·throw new Error block, 시크릿 차단, .md no-op, JSON 유효).
+- [x] **CLI 설치 메뉴**: `scripts/install-claude-code.ts`(대화형 — 위치 global/project + 항목 다중선택, settings.json 비파괴 병합·멱등·.bak, hook 경로 자동치환) + `install-files/install-claude-code.sh`(curl 원격, /dev/tty 메뉴, python JSON 병합). `package.json` scripts.install-claude-code 추가. 검증: dry-run·실제설치·재실행 멱등(중복 0)·글로벌($HOME)/프로젝트($CLAUDE_PROJECT_DIR) 경로·valid JSON 전부 통과.
+- [x] **콘텐츠 — 워크플로 21개 병렬 생성 후 검증·기록**: slash command 8(/llm-rules:audit-conventions·audit-fsd·audit-backend-domain·audit-query·verify·process·save-docs·log-feedback) + subagent 7(convention·fsd-dependency·type-utility·backend-convention·security·tanstack-query·desktop-security reviewer) + 문서 6(index·enforcement·hooks·commands·agents·settings). 구조 검증(frontmatter·H1) + camelCase 이벤트명 오염 0 확인. enforcement.md 가 컨벤션 11개 .md 별 규칙→메커니즘 매핑(§1~§11) + 마스터 요약.
+- [x] **통합 테스트**: .ts·curl 둘 다 full 설치(6 hook+x / 8 cmd / 7 agent / output-style / valid settings) 통과.
+- [x] **README** — "Claude Code 전용" 섹션 + dev 스크립트 추가.
+- [ ] **후속(미실행)**: ① 사이트(vite-plugin-docs)는 `docs/convention/*.md` 만 글로빙 → claudecode 를 사이트에 노출하려면 플러그인 ORDER/LABELS·CONVENTION_DIR 확장 필요(보류). ② 사용자 직접 설치 실행 확인. ③ node_modules 불완전(tsc 부재)로 사이트 typecheck 미실행 — 기존 환경 상태, 변경 영향 없음(scripts/ 는 tsconfig include 밖).
