@@ -17,18 +17,18 @@ changed="$(git status --porcelain 2>/dev/null | grep -Ei '\.(ts|tsx|js|jsx|mts|c
 # tsconfig 없으면 타입체크 불가 → 생략
 [ -f tsconfig.json ] || exit 0
 
-run_tsc() {
-    if grep -q '"typecheck"' package.json 2>/dev/null; then
-        if [ -f bun.lockb ] || [ -f bun.lock ]; then bun run typecheck 2>&1; return; fi
-        if [ -f pnpm-lock.yaml ]; then pnpm run typecheck 2>&1; return; fi
-        npm run typecheck 2>&1; return
-    fi
-    if [ -x ./node_modules/.bin/tsc ]; then ./node_modules/.bin/tsc --noEmit 2>&1; return; fi
-    command -v tsc >/dev/null 2>&1 && { tsc --noEmit 2>&1; return; }
-    npx --no-install tsc --noEmit 2>&1
-}
+# 타입체크 실행기 결정. 없으면 검증 생략(거짓 차단 방지) — tsconfig 만 있고 tsc 가 없는 경우.
+runner=""
+if grep -q '"typecheck"' package.json 2>/dev/null; then
+    if [ -f bun.lockb ] || [ -f bun.lock ]; then runner="bun run typecheck"
+    elif [ -f pnpm-lock.yaml ]; then runner="pnpm run typecheck"
+    else runner="npm run typecheck"; fi
+elif [ -x ./node_modules/.bin/tsc ]; then runner="./node_modules/.bin/tsc --noEmit"
+elif command -v tsc >/dev/null 2>&1; then runner="tsc --noEmit"
+fi
+[ -z "$runner" ] && exit 0
 
-out="$(run_tsc)"
+out="$($runner 2>&1)"
 status=$?
 if [ $status -ne 0 ]; then
     tail="$(printf '%s' "$out" | tail -n 40)"
