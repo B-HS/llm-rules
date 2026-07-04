@@ -24,19 +24,29 @@ LLM_RULES_MODE=replace bash -c "$(curl -fsSL https://raw.githubusercontent.com/B
 
 ---
 
-## 다른 에이전트 (Codex · Cursor)
+## 다른 에이전트 (Codex · opencode · pi · Cursor)
 
-Claude 외 에이전트는 `CLAUDE.md` 의 `@import` 가 통하지 않는다. 프로젝트 루트에 컨벤션 전문을 inline 한 `AGENTS.md` 와 `.cursor/rules/llm-rules.mdc` 를 생성한다. **대상 프로젝트 디렉토리에서** 실행한다.
+Claude 외 에이전트는 `CLAUDE.md` 의 `@import` 를 해석하지 않는다 (opencode·Codex·pi 공식 문서 확인). 또한 **Codex 는 AGENTS.md 를 합산 32 KiB 까지만** 읽으므로, 전문(~100KB) inline 대신 **코어 + 전문 사본** 구조로 배포한다.
+
+- `AGENTS.md` — **압축 코어**(≤32KiB, 관리 블록으로 멱등 갱신, 기존 내용 보존, `.bak` 백업). 코어의 §0 참조 프로토콜이 전문 파일을 가리킨다.
+- `.llm-rules/*.md` — 컨벤션 **전문 11개 사본**. 에이전트가 주제별로 읽는다.
+- `.cursor/rules/llm-rules.mdc` — Cursor 네이티브 (크기 제한 없음 → 전문 inline, `alwaysApply: true`)
+
+**프로젝트 설치** (대상 프로젝트 디렉토리에서 실행):
 
 ```bash
 cd /path/to/project
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/init-agents.sh)"
 ```
 
-- `AGENTS.md` — Codex · Cursor 공통 (관리 블록으로 멱등 갱신, 기존 내용 보존, `.bak` 백업)
-- `.cursor/rules/llm-rules.mdc` — Cursor 네이티브 (`alwaysApply: true`)
-- opencode 는 `CLAUDE.md` fallback 을 쓰므로 별도 설치 불필요.
-- 옵션: `LLM_RULES_TARGET=<dir>` · `LLM_RULES_NO_CURSOR=1` · `LLM_RULES_NO_AGENTS=1`
+**글로벌 설치** — codex(`~/.codex`) · opencode(`~/.config/opencode`) · pi(`~/.pi/agent`) 에 `AGENTS.md` + `llm-rules/` 를 설치한다:
+
+```bash
+LLM_RULES_GLOBAL=all bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/init-agents.sh)"
+```
+
+- opencode 는 `~/.claude/CLAUDE.md` 를 fallback 으로 읽지만 **`@import` 를 따라가지 않으므로**, AGENTS.md 설치(프로젝트 또는 글로벌)가 필요하다.
+- 옵션: `LLM_RULES_TARGET=<dir>` · `LLM_RULES_GLOBAL=codex,opencode,pi|all` · `LLM_RULES_NO_CURSOR=1` · `LLM_RULES_NO_AGENTS=1`
 
 ---
 
@@ -75,6 +85,6 @@ bun install
 bun run dev      # 문서 사이트 로컬 실행
 bun run build    # 정적 빌드 (→ dist/)
 bun run sync                 # 레포 클론 후 CLAUDE.md 동기화 (설치 스크립트와 동일 결과)
-bun run init-agents          # AGENTS.md + .cursor/rules 생성 (--target <dir> · --dry-run)
+bun run init-agents          # AGENTS.md(코어) + .llm-rules/ + .cursor/rules 생성 (--target <dir> · --global codex,opencode,pi|all · --dry-run)
 bun run install-claude-code  # Claude Code hooks·commands·agents 설치 메뉴 (--global/--project · --all · --dry-run)
 ```
