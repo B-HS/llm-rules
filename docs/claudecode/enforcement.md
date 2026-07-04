@@ -133,7 +133,7 @@
 | §3 BREAKING CHANGE(`!` 표기) | `hook:guard-commit`(헤더 정규식이 `!?` 허용) | 결정론 졸업(허용 통과) |
 | §5 브랜치 네이밍(`<type>/<요약>`) | `prose` | prose 유지 |
 | §6 사용자 요청 전 커밋·푸시 금지 | `permission`(`git commit`/`git push`/`merge`/`rebase` → `ask`) | 결정론 졸업(확인질문) |
-| §6 `main`/`master` 직접 커밋 금지 | `hook:guard-commit`(현재 브랜치 main/master 면 `exit 2`) | 결정론 졸업 |
+| §6 `main`/`master` 직접 커밋 금지 | `hook:guard-commit`(현재 브랜치 main/master 면 `exit 2` — 합의된 레포는 `git config llm-rules.allow-main true` 또는 `LLM_RULES_ALLOW_MAIN=1` 로 이 검사만 생략) | 결정론 졸업 |
 | §6 시크릿·빌드 산출물 커밋 금지(`dist/`/`node_modules/`/`.env`/`.pem`/`id_rsa`) | `hook:guard-commit`(스테이지 검사 차단), `permission`(`git add .env` deny) | 결정론 졸업 |
 | §6.1 `Co-Authored-By`/Claude 트레일러 금지(author 사용자 단독) | `hook:guard-commit`(`co-authored-by\|generated with\|🤖\|claude<\|noreply@anthropic` 시 `exit 2`) | 결정론 졸업 |
 | §6 `git push --force`/`-f` 금지 | `permission`(`git push --force`/`-f` → `deny`) | 결정론 졸업 |

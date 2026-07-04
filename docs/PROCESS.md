@@ -155,7 +155,8 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 - [x] E3. 검증 통과 — `bash -n` OK / .ts dry-run·실설치·재실행 멱등·기존 AGENTS.md 보존·토큰 치환 완료 / .sh file:// 로컬 프로젝트+글로벌(HOME 격리) 통과, ts↔sh 산출 블록 동일 / 코어 블록 12,743B(<32KiB)
 - [x] E4. 정합성 — `enforcement.md` 매핑 갱신(§5.4/§5.5/§6.1/§8.1/§1.1/queryOptions/프리페치/barrel/폼), hook 문구 교정(reinject-rules·session-context: any/enum·barrel·git add -A·검증 사다리 반영)
 - [x] E5. `bun run sync` 실행 — `~/.claude/convention` 11개 최신화(diff 일치 확인), CLAUDE.md 블록 변경 없음
-- [ ] 후속: 사이트 배포(push)는 사용자 요청 시. 실제 opencode/Codex/pi 환경에서 글로벌 설치 1회 실행 확인 권장.
+- [x] 후속: push 완료(d10bb59·35573af·32581c4). **로컬 머신 설치 완료** — `init-agents --global all`(~/.codex · ~/.config/opencode · ~/.pi/agent 에 AGENTS.md+llm-rules/ 11개) + `install-claude-code --global --all`(hooks 6·commands 8·agents 7·output-style·settings 병합, .bak 백업, valid JSON·실행권한 확인). 각 에이전트에서의 실동작 확인은 다음 사용 시.
+- [x] guard-commit main 차단 우회 옵션(사용자 결정 B): 커맨드 접두 `LLM_RULES_ALLOW_MAIN=1`(1회성) · `git config llm-rules.allow-main true`(레포 합의) · hook env(전역) 3종. 트레일러·시크릿·형식 검사는 허용과 무관하게 유지. 기능 테스트 5종 통과, 재설치 완료. **이 레포는 main 직접 커밋 합의 → `llm-rules.allow-main true` 설정됨.**
 
 ---
 

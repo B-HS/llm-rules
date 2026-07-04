@@ -18,10 +18,21 @@ block() {
     exit 2
 }
 
-# --- 1. main/master 직접 커밋 금지 (git §6) ---
-branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
-case "$branch" in
-    main | master) block "보호 브랜치 '$branch' 에 직접 커밋할 수 없습니다. 작업 브랜치에서 커밋하세요." ;;
+# --- 1. main/master 직접 커밋 금지 (git §6) — 명시적 허용 시에만 생략 ---
+# 허용 방법: ① 1회성 — 커맨드에 LLM_RULES_ALLOW_MAIN=1 접두
+#            ② 레포 단위(합의 기록) — git config llm-rules.allow-main true
+#            ③ 전역 — hook 환경변수 LLM_RULES_ALLOW_MAIN=1
+allow_main="${LLM_RULES_ALLOW_MAIN:-}"
+[ -z "$allow_main" ] && allow_main="$(git config --get llm-rules.allow-main 2>/dev/null || echo '')"
+printf '%s' "$cmd" | grep -q 'LLM_RULES_ALLOW_MAIN=1' && allow_main=1
+case "$allow_main" in
+    1 | true) ;;
+    *)
+        branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+        case "$branch" in
+            main | master) block "보호 브랜치 '$branch' 에 직접 커밋할 수 없습니다. 작업 브랜치에서 커밋하거나, 합의된 레포면 'git config llm-rules.allow-main true' 로 허용하세요." ;;
+        esac
+        ;;
 esac
 
 # --- 2. Co-Authored-By / Claude 트레일러 금지 (절대규칙) ---

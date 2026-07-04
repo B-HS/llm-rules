@@ -30,7 +30,7 @@
 
 차단(`exit 2`)하는 위반:
 
-1. **보호 브랜치 직접 커밋** — `git rev-parse --abbrev-ref HEAD` 결과가 `main` / `master` 이면 차단. (git.md §6)
+1. **보호 브랜치 직접 커밋** — `git rev-parse --abbrev-ref HEAD` 결과가 `main` / `master` 이면 차단. (git.md §6) **명시적 허용 3종**이 있으면 이 검사만 생략한다: ① 1회성 — 커맨드에 `LLM_RULES_ALLOW_MAIN=1` 접두, ② 레포 단위(합의 기록) — `git config llm-rules.allow-main true`, ③ 전역 — hook 환경변수 `LLM_RULES_ALLOW_MAIN=1`. 나머지 검사(2~4)는 허용과 무관하게 항상 적용된다.
 2. **Co-Authored-By / Claude 트레일러** — 커밋 명령에 `co-authored-by`, `generated with`, `🤖 generated`, `claude <` / `claude.ai <`, `noreply@anthropic` 패턴(대소문자 무시)이 있으면 차단. author 는 사용자 단독이어야 합니다. (개인 절대규칙)
 3. **스테이지의 시크릿/빌드 산출물** — `git diff --cached --name-only` 결과에 `.env`(또는 `.env.*`), `secrets/`, `dist/`, `node_modules/`, `*.pem`, `id_rsa` 가 포함되면 차단. (git.md §6 · security.md §1)
 4. **Conventional Commits 헤더 위반** — 첫 `-m`/`--message` 값을 헤더로 보고, `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(scope)?!?: .+` 패턴에 맞지 않으면 차단. (git.md §1·§2·§3)
