@@ -96,3 +96,98 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 - [x] **통합 테스트**: .ts·curl 둘 다 full 설치(6 hook+x / 8 cmd / 7 agent / output-style / valid settings) 통과.
 - [x] **README** — "Claude Code 전용" 섹션 + dev 스크립트 추가.
 - [ ] **후속(미실행)**: ① 사이트(vite-plugin-docs)는 `docs/convention/*.md` 만 글로빙 → claudecode 를 사이트에 노출하려면 플러그인 ORDER/LABELS·CONVENTION_DIR 확장 필요(보류). ② 사용자 직접 설치 실행 확인. ③ node_modules 불완전(tsc 부재)로 사이트 typecheck 미실행 — 기존 환경 상태, 변경 영향 없음(scripts/ 는 tsconfig include 밖).
+
+---
+
+## 작업: 컨벤션 프롬프트 고도화 — 에이전트 이식성 + 모호점 해소 (완료)
+
+사용자 요청 — Fable 5 수준의 준수 성능이 opencode · Codex · pi 등 다른 에이전트에서도 유지되도록 `docs/convention/*.md` 를 자기완결·무모호하게 고도화. 사전 전수 분석 완료(11개 문서 + enforcement.md + hook 6종 + init-agents.ts).
+
+**사용자 결정 (한 묶음 질문으로 확정)**: ① any 금지·unknown 경계한정 ② enum 금지→as const ③ @ts-expect-error 만 조건부 허용 ④ arrow 예외(클래스 메서드 축약·generator) ⑤ Context 는 provider 용도만 ⑥ QUERY_KEY 항상 배열+정렬 직렬화+staleTime 60s ⑦ barrel(index.ts) 금지 ⑧ 서버 프리페치 패턴 추가(+`queryOptions` 팩토리 적극 활용 — 사용자 추가 지시) ⑨ 폼 = react-hook-form+zodResolver ⑩ 배포 = 코어 AGENTS.md(≤32KiB) + `.llm-rules/` 전문 사본 + 글로벌 설치(codex/opencode/pi).
+
+### A. hook-only 규칙의 prose 승격 (이식성 구멍)
+
+- [x] A1. `git.md` §6.1 — AI 트레일러 금지·author 사용자 단독
+- [x] A2. `git.md` §6 — force push 금지, 선별 스테이징(`git add -A` 금지), 커밋 전 status/diff 확인
+- [x] A3. `common.md` §5.4 — any 금지·unknown 경계한정(+`as` 제한)
+- [x] A4. `security.md` §1.1 — 에이전트의 `.env` 읽기/쓰기/출력 금지, `.env.example` 키만, 노출 발견 시 보고
+- [x] A5. `ai-process.md` §6.2 + `comments.md` §1.1 — @ts-ignore/eslint-disable 금지, @ts-expect-error 조건부
+- [x] A6. `ai-process.md` §8.1 — 최소 기계 검증 사다리(typecheck→lint→test→실행), 거짓 통과 보고 금지
+- [x] A7. `ai-process.md` §1.1 — 세션 시작 시퀀스(베이스 룰→PROCESS.md→memory/acknowledge)
+- [x] A8. `security.md` §4 — sanitize 없는 dangerouslySetInnerHTML 금지 명문화
+
+### B. 모호점·불일치 해소
+
+- [x] B1. `index.md` — "규칙 충돌·공백 시 판단 기준" 섹션(우선순위 사다리 + 침묵 시 행동) 신설, 요약 갱신
+- [x] B2. `common.md` §1 — 신규=Bun 기본 / 기존=프로젝트 환경 우선(§6.7 연계) 명시
+- [x] B3. `common.md` §3.1 — arrow 예외(메서드 축약·function*) 명문화
+- [x] B4. `common.md` §2 — feconfig-bhs 부재 시 표 값 inline·기존 설정 우선
+- [x] B5. `common.md` §5.2 — 공개 API 경계 4종 한정 목록
+- [x] B6. `comments.md` §1.1·§1.2 — 도구 지시 주석 분류 + 기존 주석 처리(minimal diff)
+- [x] B7. `frontend.md` §6 — Context=provider 성격만, 전역 라이브러리 금지 명확화
+- [x] B8. `frontend.md` §7 — 헬퍼 부재 시 `shared/lib/fetch.ts` 생성 스펙(봉투 해석·서버 쿠키 전달)
+- [x] B9. `frontend.md` §5 — "2줄" = Prettier 포매팅 결과 기준
+- [x] B10. `query.md` §2 — 키 항상 배열(`['imageList']`)·직렬화 정렬, frontend.md 와 일치
+- [x] B11. `fsd.md` §2.1 배치 결정 트리 + shadcn=shared/ui + §4 barrel 금지
+- [x] B12. `ai-process.md` §2.1 — PROCESS.md 적용 기준(2파일/2스텝)·아카이브(300줄→docs/history)
+- [x] B13. `ai-process.md` §3.1 질문 형식 통합+템플릿, §6.5 도구 중립화
+- [x] B14. `backend.md` §10.3 트랜잭션(compose 격리), §13 ServiceDb 인라인 테스트 예시, §8 offset 페이지네이션 기본
+- [x] B15. `frontend.md` §2 — `.query.ts` 우선, `.client.ts` 는 쿼리 외 클라 전용만
+
+### C. 신규 규칙
+
+- [x] C1. `common.md` §5.5 — enum 금지 → as const + union
+- [x] C2. `query.md` §1 staleTime 60s 규정화, §4 queryOptions 팩토리, §6 서버 프리페치(HydrationBoundary·요청별 QueryClient·환경중립 fetch 전제), §7 renumber
+- [x] C3. `frontend.md` §8.4 — 폼 react-hook-form+zodResolver+shadcn Form (단순 입력은 useState)
+- [x] C4. `common.md` §3.2 — async/await 만(.then 금지), 3.2→3.3 renumber
+
+### D. 배포 레이어
+
+- [x] D1. 리서치 완료(공식 문서) — 세 에이전트 모두 `@import` 미해석. **Codex 는 AGENTS.md 합산 32KiB 제한** → 기존 80KB 인라인은 잘림. 글로벌 경로: codex `~/.codex/AGENTS.md`, opencode `~/.config/opencode/AGENTS.md`(CLAUDE.md fallback 은 import 미해석이라 무의미), pi `~/.pi/agent/AGENTS.md`.
+- [x] D2. `docs/agents-core.md` 신설(12.4KB, `{{LLM_RULES_DIR}}` 토큰) — 절대금지·프로세스·전 규칙 압축 + §0 전문 참조 프로토콜. `init-agents.ts` 재작성: AGENTS.md=코어 관리 블록, `.llm-rules/` 에 전문 11개 복사, Cursor .mdc 는 전문 inline 유지, 32KiB 근접 경고.
+- [x] D3. 상대링크 — `.llm-rules/` 에 11개가 동일 디렉토리로 복사되므로 문서 간 `./xxx.md` 링크가 그대로 해석됨(별도 병기 불필요로 종결).
+- [x] D4. 글로벌 설치 — `--global codex,opencode,pi|all` (.ts) / `LLM_RULES_GLOBAL` (.sh). README "다른 에이전트" 섹션 교정(opencode fallback 오류 정정, 코어+전문 구조, 글로벌 명령).
+
+### E. 검증·마무리
+
+- [x] E1. 교차참조 — common §3.2→§3.3 참조(convention-reviewer), query §6→§7 참조(tanstack-query-reviewer) 교정, `{{LLM_RULES_DIR}}` 토큰 잔여 0, 헤딩 번호 일관 확인
+- [x] E2. 동기화 지점 — convention/*.md 파일 셋 불변(agents-core.md 는 docs/ 루트) → plugin·sync·install.sh 영향 없음. init-agents 계열만 신구조 반영
+- [x] E3. 검증 통과 — `bash -n` OK / .ts dry-run·실설치·재실행 멱등·기존 AGENTS.md 보존·토큰 치환 완료 / .sh file:// 로컬 프로젝트+글로벌(HOME 격리) 통과, ts↔sh 산출 블록 동일 / 코어 블록 12,743B(<32KiB)
+- [x] E4. 정합성 — `enforcement.md` 매핑 갱신(§5.4/§5.5/§6.1/§8.1/§1.1/queryOptions/프리페치/barrel/폼), hook 문구 교정(reinject-rules·session-context: any/enum·barrel·git add -A·검증 사다리 반영)
+- [x] E5. `bun run sync` 실행 — `~/.claude/convention` 11개 최신화(diff 일치 확인), CLAUDE.md 블록 변경 없음
+- [ ] 후속: 사이트 배포(push)는 사용자 요청 시. 실제 opencode/Codex/pi 환경에서 글로벌 설치 1회 실행 확인 권장.
+
+---
+
+## 작업: 컨벤션 확장 2차 — 메모리 발굴 + 클린코드 (완료)
+
+사용자 요청 — 이 컴퓨터의 Claude 메모리(44개 프로젝트 feedback/project 노트)·클린코드 모범 사례를 조사해 후보 20개를 항목별 개별 질문으로 확정. **채택 17 / 제외 3**(완료 전 브라우저 인터랙션 확인·디버깅 로컬 재현 우선·prettier-plugin-tailwindcss).
+
+### 채택·반영 내역
+
+- [x] 1. 이모지·아스키아트 전면 금지 (bcrawler-next·split-65 메모리) → `ai-process.md` §0.1, `common.md` §1, index 요약
+- [x] 2. 매직넘버 금지·상수화 (storage 메모리 "여러 번 지적") → `common.md` §4.1
+- [x] 3. 실제 파일 > 메모리·문서 (keyboard 메모리) → `ai-process.md` §6.1
+- [x] 5. invalidate 는 entities 훅 onSuccess 책임 **기본(권장)** — 다중 mutation 오케스트레이션은 widgets 허용 (pawa-up + 사용자 보완 지시) → `query.md` §5
+- [x] 7. Python = uv (+PEP 723) (Luck·esp32-wireguard 메모리) → `common.md` §1
+- [x] 8. 분할 커밋은 한 커밋씩 staging→확인 (mobidays 메모리) → `git.md` §6
+- [x] 9. early return + 삼항 중첩 금지 → `common.md` §3.4
+- [x] 10. const 우선·비파괴 연산 → `common.md` §3.5
+- [x] 11. dead code 삭제(주석 보관 금지, 요청 밖은 보고만) → `comments.md` §1.2 + `ai-process.md` §6.8
+- [x] 12. `??` 우선 + `satisfies` 활용 → `common.md` §3.5·§5.3
+- [x] 13. `&&` 0-렌더링 함정 → `frontend.md` §5
+- [x] 14. key = 안정된 id (재정렬 목록 index 금지) → `frontend.md` §5
+- [x] 15. useEffect 최소화(외부 동기화만) + return 바로 위 배치 (pawa-up) → `frontend.md` §3.2·§3.3
+- [x] 17. 날짜·시간 — UTC 원칙 + **기존 DB 는 timezone 설정 확인 후 결정** + `dayjs` 기본 (사용자 보완 지시) → `common.md` §9
+- [x] 18. 라이브러리 프로젝트 SSR-first/isomorphic 코어 (furigana-ts 메모리) → `common.md` §10
+- [x] 19. 접근성 최소선(시맨틱·button/a·alt·label, 나머지 Radix/shadcn) (besign 메모리, 라이트판) → `frontend.md` §8.5
+- [x] 20. 공통 DTO `dto/common.ts` + boolean 쿼리 `z.enum().transform()` (hyun-hub 노트) → `backend.md` §5
+
+### 정합성·검증
+
+- [x] `index.md` 요약, `docs/agents-core.md` 코어 에디션, `enforcement.md` 매핑, hook 문구(reinject·session-context) 동반 갱신
+- [x] 검증: 코드펜스 짝·코어 크기(<32KiB)·`bash -n`·`init-agents --dry-run`·`bun run sync` → `~/.claude/convention` 반영
+
+### 추가 (사용자 지시): 커밋 언어·스타일 히스토리 우선
+
+- [x] `git.md` §1.1 신설 — 별도 지시 없으면 그 레포의 과거 커밋(git log)을 읽어 스타일·언어를 맞춘다. 히스토리 없으면 기본값(Conventional + 한국어). **섞여 있으면 사용자에게 질문 → 결정을 `docs/acknowledge` 에 기록 → 이후 커밋·푸시에 계속 적용.** index 요약·agents-core·enforcement 동반 갱신 + sync.

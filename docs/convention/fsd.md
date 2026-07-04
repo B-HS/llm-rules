@@ -60,6 +60,19 @@ shared     ← 공유 기반 layer
 - `app` ↔ `app` : 가능하지만 **피하는 방향으로** 간다
 - `pages` ↔ `pages` : **금지**
 
+### 2.1 배치 결정 트리 — 새 코드를 어디에 둘 것인가
+
+위에서부터 순서대로 판단해, 처음 "예"가 나오는 곳에 둔다.
+
+1. 도메인 데이터의 정의·API 호출·쿼리 훅·타입인가? → **`entities`**
+2. 도메인과 무관한 범용 UI(버튼·모달·인풋)·util·hook·상수인가? → **`shared`** (shadcn/ui 로 생성한 컴포넌트는 `shared/ui`)
+3. `fetch`/query/mutation 을 직접 수행하거나, 여러 조각을 조립해 화면 블록을 만드는가? → **`widgets`**
+4. 특정 도메인의 UI 지만 데이터·콜백을 **props 로만** 받는가? → **`features`**
+5. 라우팅 단위의 페이지 전체인가? → **`pages`** (Next.js 는 `app` 라우트)
+
+- 판단이 애매하면 **더 아래(낮은) 레이어**를 선택한다. 아래층일수록 참조 가능 범위가 넓고, 나중에 위로 승격(features → widgets)하는 편이 강등보다 안전하다.
+- 슬라이스 전용 constant·hook 은 그 슬라이스에 두고, **2곳 이상에서 쓰이는 순간 `shared` 로 승격**한다. ([common.md](./common.md) "2회 이상" 룰)
+
 ---
 
 ## 3. 컴포넌트 — 단일 책임 (SFC)
@@ -101,6 +114,7 @@ shared/                    공유 기반 (page 제외 어디서나 참조 가능
 
 - 폴더·파일은 kebab-case, 컴포넌트는 PascalCase. ([common.md 4](./common.md#4-네이밍))
 - `entities` 의 데이터 타입은 `*.type.ts` 에 두고, 가능한 한 추론·유틸리티 타입으로 유도한다. ([common.md 5.3](./common.md#53-typescript-유틸리티-타입--100-활용))
+- **barrel(index.ts) public API 를 만들지 않는다.** import 는 alias 를 통한 **파일 직접 경로**(`@features/user-card/user-card`)로 한다. 재export 계층은 순환 의존과 tree-shaking 문제를 만들고, 파일 경로만으로 레이어가 드러나는 §5 의 장점을 흐린다.
 
 ---
 

@@ -208,6 +208,8 @@ export type PostCreateInput = z.infer<typeof postCreateSchema>
 | `*ServiceDeps` / `*ServiceDb` | 의존성 / DB 추상화 타입 | `PostServiceDeps`, `PostServiceDb` |
 
 - 쿼리 파라미터는 **`z.coerce`** + `.default(...)` 로 문자열을 안전하게 강제 변환한다.
+- 단, 쿼리 파라미터의 **boolean 은 `z.enum(['true', 'false']).transform((v) => v === 'true')`** 로 변환한다. (`z.coerce.boolean()` 은 문자열 `'false'` 도 `true` 로 만들므로 금지)
+- 여러 도메인이 공유하는 스키마(`idParamSchema` · `paginationQuerySchema` 등)는 **`dto/common.ts`** 에 모은다.
 - 입력 타입(`*Query`, `*Input`)은 **반드시** `z.infer<typeof *Schema>` 로 유도한다. 손으로 적지 않는다.
 
 ---
@@ -316,6 +318,7 @@ errorResponse(code, message, details) // { success: false, error: { code, messag
 - `paginatedResponse` 는 `{ page, limit, total }` 만 받아 **`totalPages` 를 자동 계산**한다.
 - `errorResponse` 의 `details` 는 **비프로덕션에서만** 직렬화한다 (정보 노출 방지).
 - OpenAPI 문서용 응답 스키마(`successResponseSchema`, `paginatedResponseSchema`, `errorResponseDto`)도 같은 파일에서 Zod 로 제공한다.
+- 목록 조회의 페이지네이션은 **offset 기반(`page`/`limit`)을 기본**으로 한다 (§5 의 `*ListQuerySchema`). 무한스크롤 등 커서 기반이 꼭 필요한 경우에만 도입하고, 그 결정을 `docs/acknowledge` 에 기록한다.
 
 ---
 
@@ -364,6 +367,24 @@ type UserPublic = Pick<User, 'id' | 'name'>
 - 모델 타입은 손으로 적지 않고 **`$inferSelect` / `$inferInsert`** 에서 유도하고, 파생은 `Omit`/`Pick`/Union 으로 만든다. (→ [common.md 5.3](./common.md#53-typescript-유틸리티-타입--100-활용))
 - 마이그레이션은 `drizzle.config.ts`(`schema: './db/schema.ts'`, `dialect: 'mysql'`) 기준으로 `drizzle/` 에 생성한다.
 
+### 10.3 트랜잭션
+
+> 트랜잭션도 Drizzle 격리 원칙(§2.2)을 따른다. **Service 는 트랜잭션의 존재를 모른다.**
+
+- 다중 쓰기의 원자성이 필요하면 **compose 의 `*ServiceDb` 구현 내부**에서 `db.transaction(async (tx) => { ... })` 으로 묶는다.
+- `*ServiceDb` 메서드 하나가 **원자적 도메인 동작 단위**가 되도록 인터페이스를 설계한다. (예: `createPostWithTags` — Service 가 `insertPost` + `insertTags` 를 이어 부르며 원자성을 흉내내지 않는다)
+- 여러 도메인에 걸친 원자성이 필요하면, 주 도메인의 compose 에서 하나의 트랜잭션으로 구현하고 그 도메인의 `*ServiceDb` 메서드로 노출한다.
+
+```typescript
+// compose/blog.ts — ServiceDb 구현 내부에서만 트랜잭션
+insertPostWithTags: async (data) =>
+    db.transaction(async (tx) => {
+        const [{ insertId }] = await tx.insert(posts).values(data.post)
+        await tx.insert(postTags).values(data.tagIds.map((tagId) => ({ postId: insertId, tagId })))
+        return { postId: insertId }
+    }),
+```
+
 ---
 
 ## 11. 인증 / 세션 (better-auth)
@@ -405,6 +426,17 @@ describe('postListQuerySchema', () => {
     })
     test('limit 최대값을 초과하면 실패한다', () => {
         expect(() => postListQuerySchema.parse({ limit: '101' })).toThrow()
+    })
+})
+```
+
+- **Service 테스트는 mocking 라이브러리 없이** `*ServiceDb` 를 인라인 객체로 대체해 작성한다. Factory DI(§2)의 목적이 바로 이것이다.
+
+```typescript
+describe('postService.getById', () => {
+    test('없는 게시글이면 null 을 반환한다', async () => {
+        const service = createPostService({ db: { ...postServiceDbStub, getPostById: async () => null } })
+        expect(await service.getById(1)).toBeNull()
     })
 })
 ```
