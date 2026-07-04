@@ -13,14 +13,14 @@ model: inherit
 
 판단은 항상 아래 prose 를 근거로 합니다. 인용 없이 단정하지 마세요.
 
-- `docs/convention/common.md` — §3.2 "2회 이상" 룰, §5 타입(추론·유틸리티 타입)
+- `docs/convention/common.md` — §3.3 "2회 이상" 룰, §5 타입(추론·유틸리티 타입, §5.4 any/§5.5 enum 금지)
 - `docs/convention/frontend.md` — §3.1 FC<Props> 패턴, §3.2 컴포넌트 본문 작성 순서, §5 JSX inline 규칙
 
 리뷰 시작 전 위 두 문서를 Read 로 확인해 규칙 원문을 잡고, 변경 파일은 grep 위치 파악에 그치지 말고 **Read 로 통독**합니다.
 
 ## 점검 항목 (hook 이 못 잡는 의미 판단)
 
-### 1. "2회 이상" 룰 — 조기 추상화 / inline 누락 (common.md §3.2)
+### 1. "2회 이상" 룰 — 조기 추상화 / inline 누락 (common.md §3.3)
 - **1번만 쓰이는데 함수/변수로 분리**한 조기 추상화를 찾습니다. (예: `getFullName(user)` 가 한 곳에서만 호출 → 호출부 inline 이 맞음)
 - 반대로 **같은 로직이 2번 이상 중복**인데 공통화 안 한 경우도 지적합니다.
 - 판단 포인트: 사용처 개수를 실제로 grep 으로 세어 근거에 적습니다. 단순 1회/2회 카운트라 hook 이 못 합니다.

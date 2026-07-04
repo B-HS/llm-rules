@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, Grep, Glob
 TanStack Query 사용 규약을 점검합니다. 기준 문서는 @docs/convention/query.md 입니다. 점검 범위는 `$ARGUMENTS` (비어 있으면 저장소 전체).
 
 먼저 기준을 인지하세요. query.md 핵심:
-- 쿼리 키는 컴포넌트에 흩지 않고 `shared` 의 `QUERY_KEY` 상수 한 곳에서 도메인별로 중앙 관리한다.
+- 쿼리 키는 컴포넌트에 흩지 않고 `shared` 의 `QUERY_KEY` 상수 한 곳에서 도메인별로 중앙 관리한다. 키는 항상 배열, 파라미터는 정렬 후 직렬화.
+- 조회 옵션은 `queryOptions` 팩토리(`<entity>QueryOptions`)로 한 번 정의하고 `useQuery`·프리페치·무효화가 재사용한다.
 - 쿼리 훅(`useQuery`/`useMutation`)은 `entities/<entity>.query.ts` 에 두고, 클라이언트에서 도므로 최상단에 `'use client'` 를 명시한다.
 - 캐시는 손으로 `setQueryData` 하기보다 무효화 후 재조회를 기본으로 한다(낙관적 업데이트는 꼭 필요한 곳만).
 - `onSuccess` 에서 관련 쿼리만 `invalidateQueries` 로 무효화한다(과도한 광역 무효화 지양).

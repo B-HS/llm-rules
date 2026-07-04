@@ -23,7 +23,7 @@ model: inherit
 - **과대 무효화**: 키 없이 전체(`invalidateQueries()`)거나 너무 상위 prefix 로 무효화해 무관한 쿼리까지 대량 refetch 시키는 경우. partial match 특성상 상위 키 무효화는 하위 전부를 끈다는 점을 고려해 **의도한 범위와 일치**하는지 판단.
 - 무효화에 변경 변수가 필요하면 `onSuccess: (_, variables) => ...` 두 번째 인자를 쓰는가. 캐시를 **`invalidateQueries` 로 재조회**하는 게 기본이고, `setQueryData` 직접 조작은 **꼭 필요한 곳(낙관적 업데이트 등)** 으로 제한되는가.
 
-### 3. staleTime / gcTime (query.md 1·6)
+### 3. staleTime / gcTime (query.md 1·7)
 - 데이터 성격에 맞게 명시했는가(자주 바뀌면 짧게, 정적이면 길게). 무조건 0 으로 두어 **과도한 refetch** 를 유발하지 않는가.
 - **`gcTime >= staleTime`** 인가. gcTime 이 staleTime 보다 작으면 fresh 인데 GC 되어 remount 시 불필요 refetch 가 난다.
 - SSR/hydration 을 함께 쓰면 prefetch 키와 클라 키가 일치해 hydration 이 적중하는지(어긋나면 조용히 refetch).
@@ -32,8 +32,9 @@ model: inherit
 - 의존 값(id/세션/선행 응답)이 준비되지 않은 조건부 조회에 **`enabled` 가드**가 있는가. 없으면 빈/잘못된 키로 불필요 요청이 나간다.
 - enabled 조건이 **실제 의존성과 일치**하는가(예: `enabled: !!id` 인데 정작 `id` 외 다른 필수 파라미터를 안 거는 경우). 게이팅이 과해 정상 조회까지 막지는 않는가.
 
-### 5. 위치 / 네이밍 (query.md 3)
+### 5. 위치 / 네이밍 / queryOptions (query.md 3·4)
 - 훅이 `entities/<entity>.query.ts` 에 있고 최상단 `'use client'`, 요청은 `*.api.ts`/`clientFetch` 경유인가. 이름은 `use` + 동작 + Feature 인가.
+- 조회 옵션이 **`queryOptions` 팩토리**(`<entity>QueryOptions`)로 정의되어 `useQuery`·프리페치(§6)·무효화가 재사용하는가. 같은 키/fn 정의가 여러 곳에 중복되면 위반.
 
 ## 출력 형식
 
