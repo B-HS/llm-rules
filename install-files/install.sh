@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export BASE_URL="${LLM_RULES_BASE_URL:-https://raw.githubusercontent.com/B-HS/llm-rules/main}"
+REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
+VERSION="${LLM_RULES_VERSION:-latest}"
+[ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
 export CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 export TARGET="$CLAUDE_DIR/CLAUDE.md"
 export DEST="$CLAUDE_DIR/convention"
@@ -9,17 +11,31 @@ export MODE="${LLM_RULES_MODE:-}"
 export DOCS="index ai-process common comments security git frontend fsd query backend desktop"
 
 echo "▶ LLM Rules 컨벤션 설치"
-echo "  소스 : $BASE_URL/docs/convention"
+echo "  소스 : $REPO ($VERSION)"
 echo "  대상 : $TARGET"
 echo "  사본 : $DEST"
 
 command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "✗ tar 가 필요합니다."; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "✗ python3 가 필요합니다."; exit 1; }
 
+SRC="$(mktemp -d)"
+trap 'rm -rf "$SRC"' EXIT
+echo "▶ 번들 다운로드"
+if [ "$VERSION" = "latest" ]; then BUNDLE_URL="https://github.com/$REPO/releases/latest/download/llm-rules.tar.gz"
+else BUNDLE_URL="https://github.com/$REPO/releases/download/$VERSION/llm-rules.tar.gz"; fi
+if curl -fsSL --retry 3 "$BUNDLE_URL" 2>/dev/null | tar -xz -C "$SRC" 2>/dev/null; then
+    echo "  ✓ release 번들 ($VERSION)"
+else
+    [ "$VERSION" != "latest" ] && { echo "✗ 릴리스 $VERSION 번들을 받지 못했습니다."; exit 1; }
+    curl -fsSL --retry 3 "https://codeload.github.com/$REPO/tar.gz/refs/heads/main" | tar -xz -C "$SRC" --strip-components=1
+    echo "  ✓ main 소스 (release 없음 → 대체)"
+fi
+
 mkdir -p "$DEST"
-echo "▶ 컨벤션 문서 다운로드"
+echo "▶ 컨벤션 문서 복사"
 for name in $DOCS; do
-    curl -fsSL "$BASE_URL/docs/convention/$name.md" -o "$DEST/$name.md"
+    cp "$SRC/docs/convention/$name.md" "$DEST/$name.md"
     echo "  ✓ $name.md"
 done
 

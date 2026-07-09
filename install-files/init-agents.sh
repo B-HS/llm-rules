@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export BASE_URL="${LLM_RULES_BASE_URL:-https://raw.githubusercontent.com/B-HS/llm-rules/main}"
+REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
+VERSION="${LLM_RULES_VERSION:-latest}"
+[ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
 export TARGET_DIR="${LLM_RULES_TARGET:-$PWD}"
 export DOCS="index ai-process common comments security git frontend fsd query backend desktop"
 export NO_CURSOR="${LLM_RULES_NO_CURSOR:-}"
@@ -9,7 +11,7 @@ export NO_AGENTS="${LLM_RULES_NO_AGENTS:-}"
 export GLOBALS="${LLM_RULES_GLOBAL:-}"
 
 echo "▶ LLM Rules — AGENTS.md(코어) / .llm-rules(전문) / .cursor/rules 생성"
-echo "  소스 : $BASE_URL/docs"
+echo "  소스 : $REPO ($VERSION)"
 if [ -n "$GLOBALS" ]; then
     echo "  대상 : 글로벌 ($GLOBALS)"
 else
@@ -17,19 +19,26 @@ else
 fi
 
 command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "✗ tar 가 필요합니다."; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "✗ python3 가 필요합니다."; exit 1; }
 
 TMP="$(mktemp -d)"
 export TMP
 trap 'rm -rf "$TMP"' EXIT
 
-echo "▶ 컨벤션 문서 다운로드"
-curl -fsSL "$BASE_URL/docs/agents-core.md" -o "$TMP/agents-core.md"
-echo "  ✓ agents-core.md (코어)"
-for name in $DOCS; do
-    curl -fsSL "$BASE_URL/docs/convention/$name.md" -o "$TMP/$name.md"
-    echo "  ✓ $name.md"
-done
+echo "▶ 번들 다운로드"
+if [ "$VERSION" = "latest" ]; then BUNDLE_URL="https://github.com/$REPO/releases/latest/download/llm-rules.tar.gz"
+else BUNDLE_URL="https://github.com/$REPO/releases/download/$VERSION/llm-rules.tar.gz"; fi
+if curl -fsSL --retry 3 "$BUNDLE_URL" 2>/dev/null | tar -xz -C "$TMP" 2>/dev/null; then
+    echo "  ✓ release 번들 ($VERSION)"
+else
+    [ "$VERSION" != "latest" ] && { echo "✗ 릴리스 $VERSION 번들을 받지 못했습니다."; exit 1; }
+    curl -fsSL --retry 3 "https://codeload.github.com/$REPO/tar.gz/refs/heads/main" | tar -xz -C "$TMP" --strip-components=1
+    echo "  ✓ main 소스 (release 없음 → 대체)"
+fi
+cp "$TMP/docs/agents-core.md" "$TMP/agents-core.md"
+for name in $DOCS; do cp "$TMP/docs/convention/$name.md" "$TMP/$name.md"; done
+echo "  ✓ agents-core.md + 컨벤션 $(echo $DOCS | wc -w | tr -d ' ')개"
 
 python3 <<'PY'
 import os, shutil

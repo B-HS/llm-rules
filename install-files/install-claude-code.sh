@@ -4,18 +4,22 @@
 #
 # 설치 항목: settings.json(hooks+permissions) · hooks 스크립트 · slash commands · subagents · output-style
 # 위치     : 글로벌(~/.claude, 기본) 또는 프로젝트(./.claude)
+# 소스     : GitHub Release 번들(llm-rules.tar.gz) 1회 다운로드 — 파일별 raw 요청 없음(429 방지)
 # 환경변수 : LLM_RULES_CC_LOCATION=global|project  LLM_RULES_CC_TARGET=<dir>
-#            LLM_RULES_CC_ITEMS="settings hooks commands agents output-style"  LLM_RULES_BASE_URL=...
+#            LLM_RULES_CC_ITEMS="settings hooks commands agents output-style"
+#            LLM_RULES_VERSION=v1.2.3(기본 latest)  LLM_RULES_REPO=<owner/repo>
 set -euo pipefail
 
-BASE_URL="${LLM_RULES_BASE_URL:-https://raw.githubusercontent.com/B-HS/llm-rules/main}"
-ASSET_URL="$BASE_URL/docs/claudecode/assets"
+REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
+VERSION="${LLM_RULES_VERSION:-latest}"
+[ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
 
 HOOKS="guard-commit.sh lint-edit.sh scan-secrets.sh verify-on-stop.sh session-context.sh reinject-rules.sh"
 COMMANDS="audit-conventions audit-fsd audit-backend-domain audit-query verify process save-docs log-feedback"
 AGENTS="convention-reviewer fsd-dependency-reviewer type-utility-reviewer backend-convention-reviewer security-reviewer tanstack-query-reviewer desktop-security-reviewer"
 
 command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "✗ tar 가 필요합니다."; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "✗ python3 가 필요합니다."; exit 1; }
 
 # --- 위치 선택 ---
@@ -55,38 +59,52 @@ if [ -z "$ITEMS" ]; then
 fi
 
 echo "▶ Claude Code 전용 설치"
-echo "  소스 : $ASSET_URL"
+echo "  소스 : $REPO ($VERSION)"
 echo "  위치 : $LOCATION → $CLAUDE_DIR"
 echo "  항목 :$ITEMS"
 
+# --- 번들 1회 다운로드 ---
+SRC="$(mktemp -d)"
+trap 'rm -rf "$SRC"' EXIT
+echo "▶ 번들 다운로드"
+if [ "$VERSION" = "latest" ]; then BUNDLE_URL="https://github.com/$REPO/releases/latest/download/llm-rules.tar.gz"
+else BUNDLE_URL="https://github.com/$REPO/releases/download/$VERSION/llm-rules.tar.gz"; fi
+if curl -fsSL --retry 3 "$BUNDLE_URL" 2>/dev/null | tar -xz -C "$SRC" 2>/dev/null; then
+    echo "  ✓ release 번들 ($VERSION)"
+else
+    [ "$VERSION" != "latest" ] && { echo "✗ 릴리스 $VERSION 번들을 받지 못했습니다."; exit 1; }
+    curl -fsSL --retry 3 "https://codeload.github.com/$REPO/tar.gz/refs/heads/main" | tar -xz -C "$SRC" --strip-components=1
+    echo "  ✓ main 소스 (release 없음 → 대체)"
+fi
+ASSETS="$SRC/docs/claudecode/assets"
+
 has_item() { case " $ITEMS " in *" $1 "*) return 0;; *) return 1;; esac; }
-dl() { curl -fsSL "$1" -o "$2"; }
+dl() { cp "$ASSETS/$1" "$2"; }
 
 if has_item hooks; then
     mkdir -p "$CLAUDE_DIR/hooks/llm-rules"
     echo "▶ hooks"
-    for h in $HOOKS; do dl "$ASSET_URL/hooks/$h" "$CLAUDE_DIR/hooks/llm-rules/$h"; chmod +x "$CLAUDE_DIR/hooks/llm-rules/$h"; echo "  ✓ $h"; done
+    for h in $HOOKS; do dl "hooks/$h" "$CLAUDE_DIR/hooks/llm-rules/$h"; chmod +x "$CLAUDE_DIR/hooks/llm-rules/$h"; echo "  ✓ $h"; done
 fi
 if has_item commands; then
     mkdir -p "$CLAUDE_DIR/commands/llm-rules"
     echo "▶ commands"
-    for c in $COMMANDS; do dl "$ASSET_URL/commands/$c.md" "$CLAUDE_DIR/commands/llm-rules/$c.md"; echo "  ✓ /llm-rules:$c"; done
+    for c in $COMMANDS; do dl "commands/$c.md" "$CLAUDE_DIR/commands/llm-rules/$c.md"; echo "  ✓ /llm-rules:$c"; done
 fi
 if has_item agents; then
     mkdir -p "$CLAUDE_DIR/agents"
     echo "▶ agents"
-    for a in $AGENTS; do dl "$ASSET_URL/agents/$a.md" "$CLAUDE_DIR/agents/$a.md"; echo "  ✓ $a"; done
+    for a in $AGENTS; do dl "agents/$a.md" "$CLAUDE_DIR/agents/$a.md"; echo "  ✓ $a"; done
 fi
 if has_item output-style; then
     mkdir -p "$CLAUDE_DIR/output-styles"
-    dl "$ASSET_URL/output-styles/llm-rules.md" "$CLAUDE_DIR/output-styles/llm-rules.md"
+    dl "output-styles/llm-rules.md" "$CLAUDE_DIR/output-styles/llm-rules.md"
     echo "▶ output-style ✓ (활성화: /output-style llm-rules)"
 fi
 
 if has_item settings; then
     echo "▶ settings.json 병합"
-    TMPL="$(mktemp)"; dl "$ASSET_URL/settings.json" "$TMPL"
-    CC_DIR="$CLAUDE_DIR" CC_LOCATION="$LOCATION" CC_TMPL="$TMPL" python3 <<'PY'
+    CC_DIR="$CLAUDE_DIR" CC_LOCATION="$LOCATION" CC_TMPL="$ASSETS/settings.json" python3 <<'PY'
 import json, os, shutil
 
 claude_dir = os.environ["CC_DIR"]
@@ -127,7 +145,6 @@ json.dump(cur, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 open(path, "a", encoding="utf-8").write("\n")
 print("  ✓ settings.json 병합 완료")
 PY
-    rm -f "$TMPL"
 fi
 
 echo "✓ 설치 완료. 새 세션에서 /hooks 로 확인하세요."

@@ -46,7 +46,7 @@ LLM_RULES_GLOBAL=all bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-H
 ```
 
 - opencode 는 `~/.claude/CLAUDE.md` 를 fallback 으로 읽지만 **`@import` 를 따라가지 않으므로**, AGENTS.md 설치(프로젝트 또는 글로벌)가 필요하다.
-- 옵션: `LLM_RULES_TARGET=<dir>` · `LLM_RULES_GLOBAL=codex,opencode,pi|all` · `LLM_RULES_NO_CURSOR=1` · `LLM_RULES_NO_AGENTS=1`
+- 옵션: `LLM_RULES_TARGET=<dir>` · `LLM_RULES_GLOBAL=codex,opencode,pi|all` · `LLM_RULES_NO_CURSOR=1` · `LLM_RULES_NO_AGENTS=1` · `LLM_RULES_VERSION=v1.2.3`(기본 latest release)
 
 ---
 
@@ -68,7 +68,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 - **agents** — `convention-reviewer` · `fsd-dependency-reviewer` · `type-utility-reviewer` · `backend-convention-reviewer` · `security-reviewer` · `tanstack-query-reviewer` · `desktop-security-reviewer`
 - **output-style** — `llm-rules` (한국어·존댓말·간결)
 
-자세한 매핑·동작은 [docs/claudecode](./docs/claudecode/index.md) 참고. 옵션: `LLM_RULES_CC_LOCATION=global|project` · `LLM_RULES_CC_TARGET=<dir>` · `LLM_RULES_CC_ITEMS="settings hooks commands agents output-style"`
+자세한 매핑·동작은 [docs/claudecode](./docs/claudecode/index.md) 참고. 옵션: `LLM_RULES_CC_LOCATION=global|project` · `LLM_RULES_CC_TARGET=<dir>` · `LLM_RULES_CC_ITEMS="settings hooks commands agents output-style"` · `LLM_RULES_VERSION=v1.2.3`(기본 latest release)
 
 ---
 
