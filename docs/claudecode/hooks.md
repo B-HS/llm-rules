@@ -1,6 +1,6 @@
 # Hooks — llm-rules Claude Code 에디션
 
-> 컨벤션 prose(SSOT)는 `/Users/gkn/llm-rules/docs/convention/*.md` 에 있습니다. CC 에디션은 그 prose 를 복제하지 않고, 아래 6개 hook 으로 **enforce 레이어**만 더합니다.
+> 컨벤션 prose(SSOT)는 이 레포의 `docs/convention/*.md` 에 있습니다. CC 에디션은 그 prose 를 복제하지 않고, 아래 6개 hook 으로 **enforce 레이어**만 더합니다.
 > 설치 위치: `<claudeDir>/hooks/llm-rules/`. `settings.json` 의 `hooks` 가 각 이벤트에 연결합니다.
 
 ---

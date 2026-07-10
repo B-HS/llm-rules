@@ -207,4 +207,4 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 - [x] `bun run sync` + `init-agents --global all` + `install-claude-code --global --all` 전파 완료. 검증: guard-commit bash -n·기능 테스트(트레일러 차단/정상 통과), 코드펜스 짝, 코어 17.7KB(<32KiB), 구 표기 잔존 0. typecheck 는 기존 환경 문제(node_modules 불완전)로 사이트 에러 — 이번 변경(.md·.sh)과 무관
 - [x] 커밋·푸시 (사용자 요청) — feat(convention) / feat(claudecode) / docs(process) 3커밋
 
-기록: 이전 결정 번복 2건 확정 — ⑤ Context provider 한정(→ zustand 조건부 허용), ⑥ QUERY_KEY 정렬 직렬화(→ 계층 키 + 객체 그대로, v5 결정적 해싱 공식 확인). 범위 밖 관찰: claudecode 문서에 타 머신 절대경로(/Users/gkn/) 하드코딩 잔존 — 추후 정리 권장.
+기록: 이전 결정 번복 2건 확정 — ⑤ Context provider 한정(→ zustand 조건부 허용), ⑥ QUERY_KEY 정렬 직렬화(→ 계층 키 + 객체 그대로, v5 결정적 해싱 공식 확인). 범위 밖 관찰이던 claudecode 문서의 타 머신 절대경로 하드코딩(hooks.md·agents.md 3곳)은 사용자 지시로 후속 커밋에서 레포 상대 경로로 정리 완료.

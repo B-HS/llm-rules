@@ -193,6 +193,6 @@
 - 전파: `bun run sync`(~/.claude/convention 11개), `init-agents --global all`(codex·opencode·pi, 코어 18.3KB), `install-claude-code --global --all`(hooks 6·commands 8·agents 7·output-style·settings 병합)
 - typecheck: 실행됨 — 기존 환경 문제(node_modules 불완전·tsc 버전)로 사이트 에러 존재하나 이번 변경(.md·.sh)과 무관 (PROCESS.md 기존 기록과 동일 상태)
 
-### 관찰 (범위 밖 — 보고만)
+### 관찰 (범위 밖 — 보고 후 사용자 지시로 처리)
 
-- `docs/claudecode/hooks.md:3` · `agents.md` 하단에 타 머신 절대경로(`/Users/gkn/llm-rules/...`) 하드코딩이 기존부터 존재. 이식성 결함이므로 추후 상대 표기로 정리 권장.
+- `docs/claudecode/hooks.md` · `agents.md` 3곳에 타 머신 절대경로 하드코딩이 기존부터 존재했음 — 사용자 지시(2026-07-10)로 레포 상대 경로 표기로 정리 완료.

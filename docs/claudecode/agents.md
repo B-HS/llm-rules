@@ -125,7 +125,7 @@ hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영�
 | tanstack-query-reviewer | query | QUERY_KEY 중앙관리·무효화 정합성 |
 | desktop-security-reviewer | desktop | IPC 타입 계약·preload 권한 최소화 |
 
-관련 파일(절대 경로):
-- 자산 정의: `/Users/gkn/llm-rules/docs/claudecode/assets/settings.json`, `/Users/gkn/llm-rules/docs/claudecode/assets/hooks/*.sh`
-- 컨벤션 SSOT: `/Users/gkn/llm-rules/docs/convention/{common,comments,frontend,fsd,query,backend,security,desktop}.md`
+관련 파일(레포 상대 경로):
+- 자산 정의: `docs/claudecode/assets/settings.json`, `docs/claudecode/assets/hooks/*.sh`
+- 컨벤션 SSOT: `docs/convention/{common,comments,frontend,fsd,query,backend,security,desktop}.md`
 - 서브에이전트 설치 위치: `<claudeDir>/agents/`
