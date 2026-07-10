@@ -104,7 +104,7 @@ const ComposeForm: FC<ComposeFormProps> = ({ defaultValues, onSubmit }) => {
 
 - 수동 메모이제이션을 하지 않는다. (의존성 배열 관리 비용 제거)
 - 함수·파생 값은 그냥 평범하게 작성한다. 최적화는 컴파일러가 한다.
-- Next.js 설정에서 **React Compiler 를 활성화**해 둔다. ([9. Next.js 설정](#9-nextjs-설정) 참고)
+- **모든 React 프로젝트에서 React Compiler 를 활성화한다** — 이 금지 규칙의 전제다. Next.js 는 next.config([9. Next.js 설정](#9-nextjs-설정)), Vite·데스크톱 렌더러는 `babel-plugin-react-compiler` 로 설정한다.
 
 ```typescript
 // X
@@ -155,17 +155,21 @@ const handleSubmit = (e: FormEvent) => {
 | 서버 상태 | TanStack React Query v5 ([query.md](./query.md)) |
 | 로컬 상태 | `useState` |
 | 크로스커팅 값 (테마·i18n·인증 세션) | React Context (**provider 한정**) |
-| 전역 상태 라이브러리 | **사용하지 않음** |
+| 그 외 전역 클라이언트 상태 (고빈도 갱신·위젯 간 공유) | **zustand** (실수요가 있을 때만) |
 
-- **전역 상태 라이브러리(zustand · jotai · redux 등)를 도입하지 않는다.**
-- React Context 는 **provider 성격의 크로스커팅 값**(테마 · i18n · 인증 세션)에만 쓴다. 도메인 데이터·서버 상태를 Context 에 넣지 않는다 — 그것은 TanStack Query 의 몫이다.
-- Query Key 는 `QUERY_KEY` 상수로 중앙 관리한다. **키는 항상 배열**이다. ([query.md §2](./query.md))
+- 상태는 위 표를 **사다리 순서**로 적용한다: 서버 데이터면 TanStack Query, 한 컴포넌트/트리 안이면 `useState`, 갱신이 드문 크로스커팅 값이면 Context, 그래도 남는 전역 클라이언트 상태만 zustand.
+- React Context 는 **provider 성격의 저빈도 값**(테마 · i18n · 인증 세션)에만 쓴다. 값이 자주 바뀌면 모든 consumer 가 리렌더되므로(React Compiler 로도 해소되지 않는다) Context 에 두지 않는다.
+- **zustand 는 Context·`useState` 로 풀리지 않는 실수요**(고빈도 갱신 전역 상태, 위젯 간 공유 UI 상태)가 있을 때만 도입하고, 도입 사실과 사유를 `docs/acknowledge` 에 기록한다. redux·jotai 등 다른 전역 상태 라이브러리는 도입하지 않는다.
+- **서버 상태를 store 에 넣지 않는다** — 그것은 TanStack Query 의 몫이다. 도메인 데이터·서버 상태는 Context 에도 넣지 않는다.
+- store 위치(FSD): 도메인 데이터 store 는 `entities/<entity>.store.ts`, UI 전역 store 는 `shared/store/`. ([fsd.md 4](./fsd.md#4-레이어별-파일--네이밍))
+- Query Key 는 `QUERY_KEY` 상수로 중앙 관리한다. **키는 항상 배열이며, 도메인 → 동작 → 파라미터의 계층 구조**다. ([query.md §2](./query.md))
 
 ```typescript
 export const QUERY_KEY = {
     POST: {
-        LIST: ['post', 'list'],
-        GET: (id: string) => ['post', 'get', id],
+        ALL: ['post'],
+        LIST: (params: Record<string, unknown>) => ['post', 'list', params],
+        DETAIL: (id: string) => ['post', 'detail', id],
     },
 }
 ```
@@ -198,6 +202,13 @@ type ApiErrorResponse = { success: false; error: { code: string; message: string
 - BASE_URL 결합 + `fetch` 래핑, JSON 파싱, 제네릭 `<T>` 반환
 - 응답 봉투 해석 — `success: false` 면 `error.code`/`message` 를 담아 throw, `success: true` 면 `data` 만 반환
 - 서버용은 쿠키/헤더 전달을 지원한다 (프리페치·서버 컴포넌트에서 호출되므로 — [query.md §6](./query.md))
+
+### 7.1 Server Actions
+
+- 데이터 변경은 **API(별도 백엔드 / route handler) 경유가 기본**이다. 별도 백엔드 없이 Next.js 단독으로 완결되는 변경(폼 제출 등)에만 Server Action 을 쓴다.
+- Server Action 은 **`entities/<entity>.action.ts`** 에 두고 파일 최상단에 `'use server'` 를 명시한다. ([fsd.md 4](./fsd.md#4-레이어별-파일--네이밍))
+- 입력은 클라이언트 폼 검증과 **별개로 액션 본문에서 Zod 로 재검증**한다. ([security.md §2](./security.md))
+- 완료 후 서버 캐시는 `revalidateTag()`/`revalidatePath()` 로, 관련 클라이언트 쿼리는 `invalidateQueries` 로 무효화한다. ([query.md §5](./query.md))
 
 ---
 
@@ -243,13 +254,28 @@ const form = useForm<PostFormValues>({ resolver: zodResolver(postFormSchema), de
 - 이미지에는 `alt`, 폼 입력에는 label(또는 `aria-label`)을 붙인다.
 - 그 이상의 키보드 내비게이션·포커스 관리·ARIA 는 **Radix/shadcn 컴포넌트가 제공하는 것을 그대로 활용**한다. primitive 를 직접 만들 때만 WAI-ARIA 패턴 문서를 참조한다.
 
+### 8.6 i18n
+
+- i18n 라이브러리는 **프로젝트 성격에 맞게 그때그때 선택**하고, 선택과 사유를 `docs/acknowledge` 에 기록한다. (2026 기준 주요 선택지)
+
+| 라이브러리 | 적합한 경우 |
+|-----------|------------|
+| next-intl | Next.js App Router — 서버 컴포넌트·라우팅·미들웨어 locale 통합이 필요할 때 |
+| react-i18next (i18next) | 범용 React/Vite — 생태계·플러그인(백엔드 로딩·감지·TMS 연동)이 가장 클 때 |
+| Paraglide JS | 타입 안전·tree-shaking — 메시지가 타입된 함수로 생성되는 DX 를 원할 때 |
+| LinguiJS | 컴파일 타임 추출·최소 번들 — 매크로 기반 워크플로가 맞을 때 |
+| FormatJS (react-intl) | ICU MessageFormat 완전 구현 — 복잡한 복수형·성별·select 분기가 많을 때 |
+
+- 문자열을 하드코딩하지 않고 **메시지 카탈로그**를 통해 렌더링한다. 키·번역 파일 구조는 선택한 라이브러리의 공식 권장을 따른다.
+
 ---
 
 ## 9. Next.js 설정
 
 - **App Router** 사용
-- **React Compiler 활성화** (→ `useCallback`/`useMemo` 금지의 전제)
+- **React Compiler 활성화** (→ `useCallback`/`useMemo` 금지의 전제 — §4)
 - ISR + `revalidateTag()` 캐시 전략
+- 이미지는 **`next/image`** 를 기본으로 한다
 
 ---
 
@@ -257,6 +283,15 @@ const form = useForm<PostFormValues>({ resolver: zodResolver(postFormSchema), de
 
 - Props 타입은 `ComponentProps<typeof X>` 등 [common.md 5.3](./common.md#53-typescript-유틸리티-타입--100-활용) 의 유틸리티로 최대한 유도한다.
 - 직접 정의가 필요하면 `type 컴포넌트명Props = { ... }`.
+
+---
+
+## 11. 테스트
+
+- 러너는 **`bun:test`** 를 기본으로 한다. `describe`/`test` 설명은 **한국어**로 쓴다. ([backend.md §13](./backend.md) 과 동일 기준)
+- 컴포넌트 테스트는 **Testing Library**(`@testing-library/react`)로 사용자 관점(역할·라벨 쿼리)에서 작성한다. DOM 환경(happy-dom · jsdom 등)은 프로젝트 상황에 맞게 선택한다.
+- 우선순위: 유틸 · hook · 폼 검증 같은 **로직 테스트 먼저**, 그 다음 컴포넌트 동작. 스냅샷 테스트에 의존하지 않는다.
+- E2E 는 **Playwright** 를 기본으로 하되, 도입 여부·범위는 사용자와 합의한다. ([ai-process.md §8](./ai-process.md))
 
 ---
 

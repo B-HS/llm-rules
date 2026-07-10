@@ -8,7 +8,7 @@
 ## 1. 언어 & 런타임
 
 - **TypeScript strict mode** 를 기본으로 한다.
-- **Bun** 런타임을 기준으로 한다. (`node` / `npm` / `pnpm` / `vite` 대신 `bun` 사용)
+- **Bun** 런타임을 기준으로 한다. 런타임·패키지매니저·스크립트 실행·테스트 러너에서 `node` / `npm` / `pnpm` 대신 `bun` 을 쓴다. (번들러·dev 서버는 프레임워크 기본 — Next.js·Vite 등 — 을 그대로 쓴다)
     - 단, 이는 **신규 프로젝트의 기본값**이다. 런타임·패키지매니저가 이미 정해진 기존 프로젝트는 **그 프로젝트의 환경을 따른다.** ([ai-process.md §6.7](./ai-process.md) 환경 일관성이 이 규칙보다 우선)
 - **Python 프로젝트는 `uv`** 로 의존성·실행을 관리한다. (`pip install` 금지) 단발 스크립트는 PEP 723 인라인 메타(`# /// script`)로 self-contained 하게 작성하고 `uv run` 으로 실행한다.
 - 응답·커뮤니케이션·문서는 **한국어**로 작성한다.
@@ -128,7 +128,7 @@ const getLabel = (s: Status) => STATUS_LABEL[s]
 | 변수 / 함수 | camelCase | `postId`, `handleSave` |
 | 상수 | UPPER_SNAKE_CASE | `QUERY_KEY`, `API_URL` |
 | 타입 | PascalCase | `PostDetail`, `ButtonProps` |
-| Boolean | `is` 접두사 | `isPublished`, `isTop` |
+| Boolean | `is` / `has` / `can` / `should` 접두사 | `isPublished`, `hasPermission`, `canEdit`, `shouldRetry` |
 | State setter | `set` + PascalCase | `setTitle`, `setCurrency` |
 | 이벤트 핸들러 | `handle` + Action | `handleSave`, `handlePageChange` |
 | Hook | `use` + Feature | `useGetPost`, `useDebounce` |
@@ -257,6 +257,8 @@ const ROLE = { ADMIN: 'admin', USER: 'user' } as const
 type Role = (typeof ROLE)[keyof typeof ROLE]
 ```
 
+- 값 순회·런타임 참조가 필요 없으면 객체 없이 **순수 union 리터럴**로 충분하다: `type Role = 'admin' | 'user'`
+
 ---
 
 ## 6. Export
@@ -314,3 +316,10 @@ npm 등으로 **배포하는 라이브러리**를 작성할 때만 적용한다.
 - **코어 모듈은 실행 환경 전역을 참조하지 않는다** — `window` · `document` · `localStorage` 등 브라우저 전역과 `fs` · `Buffer` 등 Node 전용 API 모두 금지한다. (SSR · Edge · Workers 호환 보장)
 - DOM 등 환경 의존 기능은 **별도 export 경로**(`pkg/dom` 등)로 격리해, 서버 환경에서는 로드되지 않게 한다.
 - `package.json` `exports` 에 conditional export(`node` / `browser` 등)를 명시하고, SSR 환경(Next.js 등)의 **실제 빌드로 검증**한다. (hydration 에러 0)
+
+---
+
+## 11. 로그
+
+- **디버그용 `console.log` 를 커밋하지 않는다.** 확인이 끝나면 제거한다.
+- 남겨야 하는 서버 로그는 프로젝트의 로깅 경로(로거 · 에러 리포팅 — [backend.md §7.1](./backend.md))로 남긴다. 로그 내용의 보안 규칙은 [security.md §6](./security.md) 을 따른다.

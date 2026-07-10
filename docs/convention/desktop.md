@@ -26,10 +26,12 @@ src/
   tray.ts        - 시스템 트레이
   events/        - IPC 이벤트 핸들러
   preload/       - Preload 스크립트 (렌더러에 노출할 bridge)
-  renderer/      - React 앱 (frontend.md 규칙 그대로 적용)
-    components/
-    hooks/
-    lib/
+  renderer/      - React 앱 (frontend.md + fsd.md 규칙 그대로 적용)
+    app/         - 진입점·프로바이더
+    widgets/     - 비즈니스 로직 조립
+    features/    - 순수 컴포넌트
+    entities/    - 데이터 계층
+    shared/      - 공통 기반
 ```
 
 ### 2.2 IPC 통신
@@ -46,6 +48,12 @@ type EVENTS_TYPE = {
 
 - 이벤트 맵(`EVENTS_TYPE`)을 단일 출처로 두고, 메인·preload·렌더러가 **같은 타입을 공유**한다.
 - 핸들러 시그니처는 이 맵에서 `Parameters` / `ReturnType` 으로 유도한다. (→ [common.md 5.3](./common.md#53-typescript-유틸리티-타입--100-활용))
+
+### 2.3 보안 기본값
+
+- `BrowserWindow` 의 `webPreferences` 는 **`contextIsolation: true` · `nodeIntegration: false` · `sandbox: true`** 를 유지한다. 이 기본값을 끄는 설정을 금지한다.
+- 렌더러 노출은 preload 의 **`contextBridge.exposeInMainWorld`** 로만 한다. `ipcRenderer` 전체나 `fs` · `child_process` · `shell` 같은 네이티브 모듈을 통째로 넘기지 않는다. (§1 권한 최소화)
+- 외부 URL 은 **검증(화이트리스트) 후에만** `shell.openExternal` 로 연다. `will-navigate` · `setWindowOpenHandler` 로 임의 내비게이션을 차단한다.
 
 ---
 

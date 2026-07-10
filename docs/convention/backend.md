@@ -208,7 +208,7 @@ export type PostCreateInput = z.infer<typeof postCreateSchema>
 | `*ServiceDeps` / `*ServiceDb` | 의존성 / DB 추상화 타입 | `PostServiceDeps`, `PostServiceDb` |
 
 - 쿼리 파라미터는 **`z.coerce`** + `.default(...)` 로 문자열을 안전하게 강제 변환한다.
-- 단, 쿼리 파라미터의 **boolean 은 `z.enum(['true', 'false']).transform((v) => v === 'true')`** 로 변환한다. (`z.coerce.boolean()` 은 문자열 `'false'` 도 `true` 로 만들므로 금지)
+- 단, 쿼리 파라미터의 **boolean 은 Zod 4 의 `z.stringbool()`** 로 변환한다. (`z.coerce.boolean()` 은 문자열 `'false'` 도 `true` 로 만들므로 금지) 기본 truthy/falsy 셋(`1`·`yes`·`on` 등)이 넓으므로 `'true'`/`'false'` 만 허용하려면 `z.stringbool({ truthy: ['true'], falsy: ['false'] })` 로 좁힌다. Zod 3 프로젝트는 기존 `z.enum(['true', 'false']).transform((v) => v === 'true')` 를 유지한다.
 - 여러 도메인이 공유하는 스키마(`idParamSchema` · `paginationQuerySchema` 등)는 **`dto/common.ts`** 에 모은다.
 - 입력 타입(`*Query`, `*Input`)은 **반드시** `z.infer<typeof *Schema>` 로 유도한다. 손으로 적지 않는다.
 
@@ -282,6 +282,8 @@ export const withErrorHandling = (handler: Handler) => async (c: Context) => {
 }
 ```
 
+- `captureException` 은 에러 리포팅 도구(Sentry 등)의 전송 함수다. 리포팅 도구가 없는 프로젝트는 서버 로그 기록으로 대체한다.
+
 ### 7.2 인증 HOF — `withAuth` / `withAdmin` / `withApiToken`
 
 ```typescript
@@ -295,6 +297,11 @@ export const withAdmin = (deps: { getSession: GetSessionFn }) => (handler: AuthH
     if (!session) throw createAppError('UNAUTHORIZED')
     if (session.user.role !== 'admin') throw createAppError('FORBIDDEN')
     return handler(c, session.user)
+}
+export const withApiToken = (deps: { validateToken: (token: string) => Promise<boolean> }) => (handler: Handler) => async (c: Context) => {
+    const token = c.req.header('Authorization')?.replace('Bearer ', '')
+    if (!token || !(await deps.validateToken(token))) throw createAppError('UNAUTHORIZED')
+    return handler(c)
 }
 ```
 
@@ -384,6 +391,12 @@ insertPostWithTags: async (data) =>
         return { postId: insertId }
     }),
 ```
+
+### 10.4 마이그레이션 운영
+
+- 스키마 변경은 **`drizzle-kit generate` 로 마이그레이션 파일을 만들고 `migrate` 로 적용**한다. 마이그레이션 파일은 커밋해 히스토리를 남긴다.
+- **프로덕션 DB 에 `drizzle-kit push` 를 쓰지 않는다.** (히스토리 없는 스키마 변경)
+- 단, **이미 `push` 방식으로 운영되어 마이그레이션 추적이 없는 기존 DB** 는 임의로 전환하지 않는다 — 사용자에게 물어 `push` 유지 또는 베이스라인 마이그레이션 생성을 결정하고, 결정을 `docs/acknowledge` 에 기록한다. ([ai-process.md §6.7](./ai-process.md) 환경 일관성)
 
 ---
 

@@ -26,6 +26,7 @@
   - 백엔드: Route 의 `validator()` + DTO 스키마 ([backend.md](./backend.md) §4·§5)
   - 프론트엔드: 폼 제출 전 검증
 - 검증되지 않은 값을 그대로 DB·파일경로·셸·HTML 에 흘리지 않는다.
+- 파일 업로드는 **MIME 타입·확장자·크기를 화이트리스트로 검증**한 뒤 저장한다.
 
 ---
 
@@ -49,6 +50,7 @@
 - 인증은 **better-auth** 기반(세션 · OAuth). ([frontend.md](./frontend.md) §8.3 · [backend.md](./backend.md) §11)
 - 권한은 **최소 권한 원칙**. 보호가 필요한 핸들러는 `withAuth` / `withAdmin` HOF 로 감싼다. ([backend.md](./backend.md) §7)
 - 인가 검사를 **클라이언트에만 의존하지 않는다.** 서버에서 반드시 재확인한다.
+- 로그인·발송·검색처럼 남용 가능한 **공개 엔드포인트에는 rate limit 을 둔다.** (전역·경로 게이트는 미들웨어 — [backend.md](./backend.md) §1)
 
 ---
 

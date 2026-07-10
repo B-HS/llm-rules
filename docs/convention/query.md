@@ -1,7 +1,7 @@
 # QUERY — TanStack Query 사용지침 (v5)
 
 > [common.md](./common.md) · [frontend.md](./frontend.md) · [fsd.md](./fsd.md) 를 전제로 한다.
-> **서버 상태는 TanStack React Query v5 로만 다룬다.** 로컬 상태는 `useState`, 전역 상태 라이브러리는 쓰지 않는다. ([frontend.md 6](./frontend.md#6-상태-관리))
+> **서버 상태는 TanStack React Query v5 로만 다룬다.** 로컬 상태는 `useState`, 그 밖의 전역 클라이언트 상태는 [frontend.md 6](./frontend.md#6-상태-관리) 의 사다리(Context 는 provider 한정 · 실수요 시 zustand)를 따른다 — 서버 상태를 store·Context 에 넣지 않는다.
 
 ---
 
@@ -30,20 +30,21 @@ export const TanstackQueryProvider: FC<PropsWithChildren> = ({ children }) => <Q
 
 ```typescript
 export const QUERY_KEY = {
-    AUTH: { SESSION: ['session'] },
-    IMAGE: { LIST: ['imageList'] },
+    AUTH: { SESSION: ['auth', 'session'] },
+    IMAGE: { LIST: ['image', 'list'] },
     POST: {
-        GET: (id: string) => ['post', id],
-        LIST: (params: Record<string, unknown>) =>
-            ['postList', Object.entries(params).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}-${v}`).join('-')],
+        ALL: ['post'],
+        LIST: (params: Record<string, unknown>) => ['post', 'list', params],
+        DETAIL: (id: string) => ['post', 'detail', id],
     },
-    COMMENT: { LIST: (postId: string) => ['commentList', postId] },
+    COMMENT: { LIST: (postId: string) => ['comment', 'list', postId] },
 }
 ```
 
-- **키는 항상 배열이다.** 문자열 단독 키를 만들지 않는다.
-- **파라미터가 없는 키**는 정적 배열(`['session']`), **파라미터가 있는 키**는 함수(`GET: (id) => ['post', id]`)로 만든다.
-- 목록처럼 검색/필터 파라미터가 있으면 **파라미터를 키에 직렬화**해 캐시를 구분한다. 이때 **키를 정렬(sort)** 해 파라미터 순서가 달라도 같은 캐시를 가리키게 한다.
+- **키는 항상 배열이며, 도메인 → 동작 → 파라미터의 계층 구조**로 만든다. 문자열 단독 키를 만들지 않는다.
+- **파라미터가 없는 키**는 정적 배열, **파라미터가 있는 키**는 함수(`DETAIL: (id) => ['post', 'detail', id]`)로 만든다.
+- 목록처럼 검색/필터 파라미터가 있으면 **파라미터 객체를 직렬화하지 않고 그대로 키에 넣는다.** v5 는 쿼리 키를 결정적으로 해싱하므로 객체 속성 순서가 달라도 같은 캐시를 가리킨다. (배열 요소의 순서는 구분되므로 계층 순서는 유지한다)
+- 키가 계층 구조라서 **도메인 prefix 무효화**가 가능하다: `invalidateQueries({ queryKey: QUERY_KEY.POST.ALL })` 은 `['post', ...]` 로 시작하는 목록·상세를 한 번에 무효화한다.
 - 무효화(`invalidateQueries`)도 같은 `QUERY_KEY` 를 써서 키 문자열을 손으로 적지 않는다.
 
 ---
@@ -63,7 +64,7 @@ export const QUERY_KEY = {
 ```typescript
 export const postQueryOptions = (id: string) =>
     queryOptions({
-        queryKey: QUERY_KEY.POST.GET(id),
+        queryKey: QUERY_KEY.POST.DETAIL(id),
         queryFn: async () => {
             const data = await clientFetch<{ post: PostDetail }>(`/api/blog/posts/${id}`)
             return data.post
@@ -77,6 +78,7 @@ export const useGetPost = (id: string) => useQuery(postQueryOptions(id))
 - `queryKey` 는 항상 `QUERY_KEY` 에서 가져온다. (queryOptions 안에서만 사용)
 - `queryFn` 은 `clientFetch` 로 응답을 받아 **필요한 데이터만 꺼내** 반환한다. 반환 타입은 `queryFn` 에서 **자동 추론**되므로 제네릭을 손으로 적지 않는다. ([common.md §5.2](./common.md) 추론 우선)
 - 조건부 조회·개별 `staleTime` 등 호출부 옵션은 스프레드로 합친다: `useQuery({ ...postQueryOptions(id), enabled })`
+- 로딩 UI 기준: **첫 화면에 반드시 보이는 데이터는 서버 프리페치(§6) + `useSuspenseQuery`** 로 로딩 없이 그리고, 그 외에는 `isPending` 분기로 스켈레톤/스피너를 그린다.
 - 조회 실패 UI 는 훅을 소비하는 widget 에서 `isError` 분기 또는 error boundary 로 처리한다. (조회 실패에 mutation 처럼 toast 를 강제하지 않는다)
 
 ---
@@ -114,18 +116,20 @@ export const useCreateComment = () => {
 ```tsx
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 
-const Page = async ({ params }: PageProps) => {
+const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
     const queryClient = new QueryClient()
-    await queryClient.prefetchQuery(postQueryOptions(params.id))
+    await queryClient.prefetchQuery(postQueryOptions(id))
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <PostDetailWidget id={params.id} />
+            <PostDetailWidget id={id} />
         </HydrationBoundary>
     )
 }
 ```
 
+- **Next.js 15+ 의 `params`/`searchParams` 는 Promise 다** — 반드시 `await` 해서 꺼낸다. (16 부터 동기 접근이 완전히 제거됨)
 - 서버에서는 **요청마다 `new QueryClient()`** 를 만든다. (사용자 간 캐시 공유 방지)
 - 클라이언트 widget 은 §4 의 훅(`useGetPost`)을 그대로 쓴다 — 같은 `queryOptions` 이므로 프리페치된 캐시에 즉시 히트한다. 로딩 없는 렌더가 필요하면 `useSuspenseQuery(postQueryOptions(id))` 를 쓴다.
 - **전제**: `queryFn` 의 fetch 헬퍼가 서버에서도 동작해야 한다(절대 URL·쿠키 전달 — [frontend.md 7](./frontend.md#7-api-호출)). 클라이언트 전용 헬퍼라면 프리페치를 도입하기 전에 헬퍼를 환경 중립으로 정리한다.

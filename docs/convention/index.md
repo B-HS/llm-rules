@@ -16,7 +16,7 @@
 | [comments.md](./comments.md) | **공통 (FE·BE 전부)** | 코드 주석 금지, 유일한 예외 JSDoc(영어), 설명은 `docs/` 로 |
 | [security.md](./security.md) | **공통 (FE·BE 전부)** | 시크릿·환경변수, 입력 검증(Zod), Injection·XSS, 인증/인가, 에러·로그, 의존성 |
 | [git.md](./git.md) | **공통 (FE·BE 전부)** | Conventional Commits v1.0.0 — 커밋 형식·type·BREAKING CHANGE, 브랜치, 커밋·푸시 안전 규칙 |
-| [frontend.md](./frontend.md) | **프론트엔드 (Next.js / React)** | 컴포넌트(FC·작성순서), React Compiler, JSX inline, 상태(Context 범위)/API/스타일/인증/폼(react-hook-form) |
+| [frontend.md](./frontend.md) | **프론트엔드 (Next.js / React)** | 컴포넌트(FC·작성순서), React Compiler, JSX inline, 상태(사다리·zustand 조건부), API/Server Actions, 스타일/인증/폼, i18n, 테스트 |
 | [fsd.md](./fsd.md) | **프론트엔드 아키텍처 (필수)** | 레이어 정의, 의존성(참조) 방향 매트릭스, 1파일 1컴포넌트(SFC), Path Alias(=레이어) |
 | [query.md](./query.md) | **프론트엔드 (서버 상태)** | TanStack Query v5 사용지침 — Provider(staleTime), QUERY_KEY 중앙관리, queryOptions/useQuery/useMutation, 서버 프리페치(HydrationBoundary), 무효화 |
 | [backend.md](./backend.md) | **백엔드 (Hono.js)** | 계층형 구조, Factory DI, DTO, 에러 처리, HOF, 응답 헬퍼, DB(Drizzle), 테스트, 환경변수 |
@@ -87,7 +87,7 @@
 - JSX 에서는 **2줄 이상이 되지 않는 한 마크업에 inline** 으로 작성하는 것을 선호한다. `key` 는 안정된 id(재정렬 목록에 index 금지), `{count && ...}` 의 0-렌더링 함정 주의.
 - 시맨틱 태그 우선, 클릭 요소는 `button`/`a` 구분, 이미지 `alt` — 접근성 최소선을 지킨다.
 - **공통 constant · hook 은 `shared/` 단**에 작성한다 (FSD). barrel(index.ts)은 만들지 않는다.
-- **전역 상태 라이브러리 금지.** React Context 는 provider 성격(테마·i18n·세션)에만. 서버 상태는 [query.md](./query.md) 의 **`queryOptions` 팩토리 + `QUERY_KEY` 배열 키**로 다룬다.
+- 상태는 **사다리로 선택**한다: 서버 = TanStack Query([query.md](./query.md) 의 **`queryOptions` 팩토리 + 계층형 `QUERY_KEY`**), 로컬 = `useState`, 저빈도 크로스커팅 = Context(provider 한정), 그 외 전역 클라이언트 상태만 **zustand**(실수요 시 + `docs/acknowledge` 기록). redux·jotai 등 다른 전역 라이브러리와 서버 상태의 store 반입은 금지.
 - 폼은 **react-hook-form + `zodResolver`** (shadcn Form). 단순 한두 필드는 `useState`.
 
 ### 백엔드 ([backend.md](./backend.md))
@@ -107,7 +107,7 @@
 ## 디렉토리
 
 ```
-rules/docs/convention/
+docs/convention/
 ├── index.md       ← (이 문서) 진입점·요약
 ├── ai-process.md  ← AI 작업 프로세스 (Claude Code 등)
 ├── common.md      ← 공통 컨벤션

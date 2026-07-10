@@ -215,6 +215,7 @@
 3. **기존 테스트** — 있는 테스트가 깨지지 않는지 (`bun test`)
 4. **실행 확인** — 가능하면 실제 실행 경로(dev 서버·스크립트 실행)로 동작을 확인
 
+- 프로젝트는 `package.json` 에 **`typecheck`·`test` 스크립트를 제공**한다 — 검증 사다리와 자동 훅이 결정적으로 동작하기 위한 전제다. `lint` 는 설정된 프로젝트에서만 요구된다.
 - 실행기가 없는 환경(의존성 미설치 등)이면 **그 사실을 있는 그대로 보고**하고 넘어간다. 검증하지 않았으면서 "통과했다"고 보고하는 것을 금지한다.
 - 검증 실패를 발견하면 **고치고 다시 검증**한 뒤에만 완료를 보고한다.
 
@@ -270,7 +271,7 @@
 - **`@ts-ignore` · `eslint-disable` 로 검사기 끄기.** (§6.2 — `@ts-expect-error` 만 조건부 허용)
 - **코드 주석 작성** (JSDoc 제외). ([comments.md](./comments.md))
 - **`useCallback` · `useMemo` 수동 메모이제이션.** ([frontend.md](./frontend.md) §4)
-- **FSD 역방향 import / 전역 상태 라이브러리.** ([fsd.md](./fsd.md) §2 · [frontend.md](./frontend.md) §6)
+- **FSD 역방향 import / 임의 전역 상태 라이브러리 도입** (zustand 는 frontend.md §6 의 실수요 조건에서만, 서버 상태의 store 반입 금지). ([fsd.md](./fsd.md) §2 · [frontend.md](./frontend.md) §6)
 - **시크릿 하드코딩·커밋·로그 노출 / 미검증 입력 사용 / `.env` 읽기·쓰기.** ([security.md](./security.md))
 - **사용자 요청 전 커밋·푸시 / AI 트레일러(Co-Authored-By 등) / `git add -A` / force push.** ([git.md](./git.md) §6)
 - **검증 없이 "통과했다" 보고.** (§8.1)

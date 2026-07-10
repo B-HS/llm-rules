@@ -32,6 +32,7 @@ if (isPaid) { ... }
 - shebang: `#!/usr/bin/env bun` (실행 스크립트 첫 줄)
 - triple-slash 지시: `/// <reference ... />`
 - `'use client'` / `'use server'` 디렉티브 (문자열이므로 애초에 주석이 아님)
+- **도구 설정 파일**(GitHub Actions 등 CI yml · toml · 설정용 json5)의 **짧은 설명 주석은 허용**한다 — 코드가 아니라 도구 구성이기 때문이다. 단 장문 설명은 여전히 `docs/` 로 옮긴다.
 - 검사 억제 지시(`@ts-expect-error` 등)는 원칙적으로 **금지**다. 허용 조건은 [ai-process.md §6.2](./ai-process.md) 를 따른다 — 코드로 해결 불가능한 경우에 한해 `@ts-expect-error` 만, 사유는 `docs/` 에 기록. `@ts-ignore` · `eslint-disable` 은 항상 금지.
 
 ### 1.2 기존 코드의 주석 처리
@@ -109,6 +110,7 @@ IMAP UID 가 아니라 internalDate 기준 커서를 쓴다. UID 는 메일함
 | 공개 API 시그니처 문서화 | **JSDoc (영어)** 만 허용 |
 | JSDoc 다국어가 필요 | 사용자에게 target lang 확인 후 프로젝트에 명시 |
 | shebang · triple-slash · 디렉티브 | 도구 지시이므로 허용 (§1.1) |
+| 도구 설정 파일(yml·toml 등)의 짧은 주석 | 허용 (§1.1) |
 | `@ts-expect-error` 가 불가피 | [ai-process.md §6.2](./ai-process.md) 조건에서만 + `docs/` 사유 기록 |
 | 기존 코드에 이미 있는 주석 | 요청 범위 밖이면 유지, 수정하는 코드의 주석은 개선으로 대체 (§1.2) |
 | 배경·이유·트레이드오프·복잡한 규칙 | 코드가 아니라 **`docs/`** 에 (대상 파일 · 리포트 · 상세) |

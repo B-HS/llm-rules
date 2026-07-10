@@ -44,12 +44,12 @@ shared     ← 공유 기반 layer
 
 | from \ to | shared | entities | features | widgets | pages | app |
 |-----------|:------:|:--------:|:--------:|:-------:|:-----:|:---:|
-| **shared**   | ✅ 끼리 | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **entities** | ✅ | ✅ 끼리 | ❌ | ❌ | ❌ | ❌ |
-| **features** | ✅ | ✅ | ✅ 끼리 | ❌ | ❌ | ❌ |
-| **widgets**  | ✅ | ✅ | ✅ | ✅ 끼리 | ❌ | ❌ |
-| **pages**    | ✅ | ✅ | ✅ | ✅ | ⛔ 끼리 금지 | ❌ |
-| **app**      | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 끼리 지양 |
+| **shared**   | O 끼리 | X | X | X | X | X |
+| **entities** | O | O 끼리 | X | X | X | X |
+| **features** | O | O | O 끼리 | X | X | X |
+| **widgets**  | O | O | O | O 끼리 | X | X |
+| **pages**    | O | O | O | O | X 끼리 금지 | X |
+| **app**      | O | O | O | O | O | △ 끼리 지양 |
 
 ### 동일 레이어 내 참조
 
@@ -106,10 +106,12 @@ features/<feature>/        비즈니스 로직 없는 근간 컴포넌트 (1파�
 entities/<entity>/         데이터 계층
   <entity>.api.ts          API 호출
   <entity>.query.ts        TanStack Query 훅
-  <entity>.action.ts       서버 액션 등
+  <entity>.action.ts       Server Action (frontend.md §7.1)
   <entity>.type.ts         타입 정의
+  <entity>.store.ts        도메인 zustand store (frontend.md §6 실수요 조건 충족 시)
 shared/                    공유 기반 (page 제외 어디서나 참조 가능)
   lib/ · constants/ · ui/  util·hook·상수·공통 컴포넌트
+  store/                   UI 전역 zustand store (frontend.md §6)
 ```
 
 - 폴더·파일은 kebab-case, 컴포넌트는 PascalCase. ([common.md 4](./common.md#4-네이밍))
