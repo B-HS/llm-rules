@@ -192,3 +192,19 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 ### 추가 (사용자 지시): 커밋 언어·스타일 히스토리 우선
 
 - [x] `git.md` §1.1 신설 — 별도 지시 없으면 그 레포의 과거 커밋(git log)을 읽어 스타일·언어를 맞춘다. 히스토리 없으면 기본값(Conventional + 한국어). **섞여 있으면 사용자에게 질문 → 결정을 `docs/acknowledge` 에 기록 → 이후 커밋·푸시에 계속 적용.** index 요약·agents-core·enforcement 동반 갱신 + sync.
+
+---
+
+## 작업: 컨벤션 전수조사 3차 — 삭제·고도화·추가 결정 리스트 (완료)
+
+사용자 요청 — frontend.md §6 전역 상태 라이브러리 금지 재검토를 계기로, `docs/convention/` 11개 문서 + enforcement 레이어를 전수조사한다. 삭제·고도화·추가 후보를 추천과 함께 결정 리스트로 제시하고, **사용자 결정을 받은 항목만** 반영한다.
+
+- [x] 컨벤션 11개 문서 전수 검토 — 버전 민감 항목은 공식 문서로 확인 완료: TanStack Query v5 쿼리 키 결정적 해싱·prefix 무효화, Zod 4 `z.stringbool()`, Next.js 15 `params` Promise 화(16 에서 동기 접근 제거)
+- [x] enforcement 레이어 인벤토리 — 5개 층(훅 grep·주입 텍스트·에이전트/커맨드 프롬프트·agents-core·claudecode 문서) 매핑 완료. 발견 공백: 전역상태 금지의 리뷰어 매핑 불일치(enforcement.md:156), boolean 접두사 미점검, Electron 보안 구체값이 desktop-security-reviewer 단일 지점, 주입 요약 4~5개 복제본 문구 상이
+- [x] 결정 리스트 작성·제시 — `docs/acknowledge/2026-07-10-convention-audit.md` (35개 항목: 삭제·완화 1 / 고도화 12 / 추가 13 / 정합 수정 9)
+- [x] 사용자 결정 수령 — 1=B안(zustand 조건부), 2~12 적용·13 패스(dayjs 표준 확정), 14~22 적용(보완: 테스트 DOM 환경 상황별·lint 비필수·i18n 선택지 표·drizzle push 예외), 23~25 보류(흔적 불요), 27~35 전부 적용. 상세: `docs/acknowledge/2026-07-10-convention-audit.md` 결정 기록
+- [x] 반영 완료 — convention 11개 + agents-core + claudecode(guard-commit claude-session 차단 추가·리뷰어 4·커맨드 2·output-style 오기 교정·enforcement/hooks/agents 문서). 26 은 방식 조정: 생성 스크립트 대신 "훅 = 주입 문구 단일 출처, hooks.md 복제 제거" (사유는 acknowledge)
+- [x] `bun run sync` + `init-agents --global all` + `install-claude-code --global --all` 전파 완료. 검증: guard-commit bash -n·기능 테스트(트레일러 차단/정상 통과), 코드펜스 짝, 코어 17.7KB(<32KiB), 구 표기 잔존 0. typecheck 는 기존 환경 문제(node_modules 불완전)로 사이트 에러 — 이번 변경(.md·.sh)과 무관
+- [x] 커밋·푸시 (사용자 요청) — feat(convention) / feat(claudecode) / docs(process) 3커밋
+
+기록: 이전 결정 번복 2건 확정 — ⑤ Context provider 한정(→ zustand 조건부 허용), ⑥ QUERY_KEY 정렬 직렬화(→ 계층 키 + 객체 그대로, v5 결정적 해싱 공식 확인). 범위 밖 관찰: claudecode 문서에 타 머신 절대경로(/Users/gkn/) 하드코딩 잔존 — 추후 정리 권장.
