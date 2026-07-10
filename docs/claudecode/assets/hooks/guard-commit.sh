@@ -36,7 +36,7 @@ case "$allow_main" in
 esac
 
 # --- 2. Co-Authored-By / Claude 트레일러 금지 (절대규칙) ---
-if printf '%s' "$cmd" | grep -Eiq 'co-authored-by|generated with|🤖 *generated|claude(\.ai)? *<|noreply@anthropic'; then
+if printf '%s' "$cmd" | grep -Eiq 'co-authored-by|generated with|🤖 *generated|claude(\.ai)? *<|noreply@anthropic|claude-session *:'; then
     block "커밋 메시지에 Co-Authored-By / Claude 트레일러가 포함되어 있습니다. author 는 사용자 단독이어야 합니다."
 fi
 

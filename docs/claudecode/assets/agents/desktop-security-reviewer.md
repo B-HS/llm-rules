@@ -16,7 +16,7 @@ model: inherit
 - preload(bridge)에는 **필요한 API 만** 노출한다. 노출 표면이 `EVENTS_TYPE` 같은 타입 계약으로 한정되는지 확인한다.
 - `ipcRenderer.on`/`invoke` 를 채널 화이트리스트 없이 임의 채널 문자열로 그대로 흘려보내면 지적한다.
 
-### 2. 메인 프로세스 보안 설정 (Electron)
+### 2. 메인 프로세스 보안 설정 (Electron — desktop.md §2.3)
 - `BrowserWindow` 의 `webPreferences` 에서:
   - **`contextIsolation: false`** → 위반(기본값 true 를 끄지 않는다).
   - **`nodeIntegration: true`** → 위반(렌더러에 Node 전권 노출).

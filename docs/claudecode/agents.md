@@ -48,7 +48,7 @@ hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영�
   - **JSX inline 규칙** — 한 줄짜리 핸들러·조건·매핑을 굳이 밖으로 뺐는지, 2줄 이상인데 inline 으로 길게 늘어졌는지.
   - **컴포넌트 작성 순서** — `useRef → useState → 함수/파생 → useEffect/custom hooks` 순서 위반.
   - **`FC<Props>` 패턴**·Props 타입 네이밍(`컴포넌트명 + Props`).
-  - **네이밍**(폴더·파일 kebab-case, 컴포넌트 PascalCase, boolean `is` 접두사, 핸들러 `handle`, hook `use`, HOF `with`, factory `create`).
+  - **네이밍**(폴더·파일 kebab-case, 컴포넌트 PascalCase, boolean `is/has/can/should` 접두사, 핸들러 `handle`, hook `use`, HOF `with`, factory `create`).
   - **코드 주석**·`function` 키워드·default export — hook 이 SOFT 경고만 내는 항목을 맥락으로 재확인(JSDoc 예외 판단 포함).
 
 ## 2. fsd-dependency-reviewer
@@ -96,7 +96,7 @@ hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영�
 
 - **언제**: TanStack Query 훅(`useQuery`/`useMutation`)·`*.query.ts`·QUERY_KEY 를 다룰 때. `/llm-rules:audit-query` 로 수동 호출.
 - **무엇을 리뷰**: query.md 의 **서버 상태 정합성**(hook 으로 검사 불가).
-  - **QUERY_KEY 중앙관리** — 컴포넌트에 인라인 배열 키를 적었는지. 파라미터 없는 키는 정적 값, 있는 키는 함수, 목록은 파라미터를 키에 직렬화했는지.
+  - **QUERY_KEY 중앙관리** — 컴포넌트에 인라인 배열 키를 적었는지. 도메인 계층 키 구조, 파라미터 없는 키는 정적 값, 있는 키는 함수, 목록은 파라미터 객체가 키에 그대로 포함됐는지(v5 결정적 해싱 — 수동 직렬화는 위반).
   - **위치·네이밍** — 훅을 `entities/<entity>.query.ts` 에 뒀는지, `'use client'` 명시, `use`+동작+Feature 네이밍.
   - **조회** — `queryKey` 를 `QUERY_KEY` 에서 가져오는지, `queryFn` 이 `clientFetch` 로 필요한 데이터만 반환하는지, 조건부는 `enabled`.
   - **변경·무효화** — `onSuccess` 에서 **관련 쿼리만 `invalidateQueries`**(같은 `QUERY_KEY` 사용), 캐시 직접 `setQueryData` 대신 무효화 후 재조회, `toast` 피드백, 무효화에 `variables` 필요 시 두 번째 인자 사용.

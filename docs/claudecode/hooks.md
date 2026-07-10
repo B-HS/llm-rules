@@ -31,7 +31,7 @@
 차단(`exit 2`)하는 위반:
 
 1. **보호 브랜치 직접 커밋** — `git rev-parse --abbrev-ref HEAD` 결과가 `main` / `master` 이면 차단. (git.md §6) **명시적 허용 3종**이 있으면 이 검사만 생략한다: ① 1회성 — 커맨드에 `LLM_RULES_ALLOW_MAIN=1` 접두, ② 레포 단위(합의 기록) — `git config llm-rules.allow-main true`, ③ 전역 — hook 환경변수 `LLM_RULES_ALLOW_MAIN=1`. 나머지 검사(2~4)는 허용과 무관하게 항상 적용된다.
-2. **Co-Authored-By / Claude 트레일러** — 커밋 명령에 `co-authored-by`, `generated with`, `🤖 generated`, `claude <` / `claude.ai <`, `noreply@anthropic` 패턴(대소문자 무시)이 있으면 차단. author 는 사용자 단독이어야 합니다. (개인 절대규칙)
+2. **Co-Authored-By / Claude 트레일러** — 커밋 명령에 `co-authored-by`, `generated with`, `🤖 generated`, `claude <` / `claude.ai <`, `noreply@anthropic`, `claude-session:`(AI 세션 링크 트레일러 — 콜론 필수 매칭이라 단순 언급은 오탐하지 않음) 패턴(대소문자 무시)이 있으면 차단. author 는 사용자 단독이어야 합니다. (git.md §6.1)
 3. **스테이지의 시크릿/빌드 산출물** — `git diff --cached --name-only` 결과에 `.env`(또는 `.env.*`), `secrets/`, `dist/`, `node_modules/`, `*.pem`, `id_rsa` 가 포함되면 차단. (git.md §6 · security.md §1)
 4. **Conventional Commits 헤더 위반** — 첫 `-m`/`--message` 값을 헤더로 보고, `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(scope)?!?: .+` 패턴에 맞지 않으면 차단. (git.md §1·§2·§3)
 
@@ -90,7 +90,7 @@
 
 - `export default` (단 `*page.tsx`, `*layout.tsx`, `*route.ts`, `*app/*`, `*pages/*` 는 제외) — common.md §6(named export 기본).
 - **`function` 키워드** (`function ` 선언 또는 `= function(`) — common.md §3.1(arrow function).
-- **코드 주석** (`//`, `/* */`. 단 파일에 `/**`(JSDoc)가 있으면 제외) — comments.md §1.
+- **코드 주석** (`//`, `/* */`. 단 파일에 `/**`(JSDoc)가 있으면 제외. 도구 설정 파일 yml·toml 의 짧은 주석은 컨벤션상 허용 — comments.md §1.1 — 이며 이 훅은 TS/JS 만 검사하므로 영향 없음) — comments.md §1.
 - `HACK` / `FIXME` / `XXX` / `TODO` / `@ts-ignore` / `eslint-disable` — ai-process.md §6.2.
 - sanitize 없는 `dangerouslySetInnerHTML` (`sanitize` / `DOMPurify` 가 없을 때만) — security.md §4.
 
@@ -147,7 +147,7 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 세션 시작/재개 시:
 
 1. **`docs/` 디렉토리를 보장**(`mkdir -p docs`) — comments.md §3 / ai-process.md §1.
-2. 컨벤션 핵심 요약(arrow function only, return type 미명시, `any`/`unknown` 금지, 주석 금지, 2회 이상일 때만 공통화, named export, 타입 유도, `useCallback`/`useMemo` 금지, FSD 의존 방향, Conventional Commits, Co-Authored-By 금지, 시크릿은 `.env`+`getEnv()`, 모호하면 1줄 객관식 질문)을 컨텍스트로 만듭니다.
+2. 컨벤션 핵심 요약을 컨텍스트로 만듭니다. **요약 문구의 단일 출처는 스크립트(`session-context.sh`)의 주입 텍스트**이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다. (주제: 함수·타입·주석·매직넘버/이모지·export·FSD/쿼리·커밋·시크릿·검증·질문 방식)
 3. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
 4. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
 
@@ -162,7 +162,7 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 | 이벤트 | `UserPromptSubmit` (timeout 10s) |
 | 동작 | 매 프롬프트마다 "절대 금지" 안티패턴 1줄을 **`additionalContext` 로 재주입**(`exit 0`) |
 
-매 사용자 프롬프트 제출 시, 짧은 리마인더 한 줄(arrow-fn only · 주석 금지(JSDoc 만) · `any`/`unknown` 금지 · `useCallback`/`useMemo` 금지 · named export · FSD 의존 방향 위→아래 · Conventional Commits · Co-Authored-By 금지 · 요청 전 commit/push 금지 · 시크릿 하드코딩 금지 · 모호하면 1줄 객관식 질문)을 `{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":...}}` 로 주입합니다.
+매 사용자 프롬프트 제출 시, 짧은 리마인더 한 줄을 `{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":...}}` 로 주입합니다. **리마인더 문구의 단일 출처는 스크립트(`reinject-rules.sh`)** 이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다.
 
 **목적**: 긴 컨텍스트에서 규칙 드리프트(망각)를 막습니다. **토큰 절약을 위해 의도적으로 짧게** 유지합니다.
 

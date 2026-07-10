@@ -66,7 +66,7 @@
 | §6.7 프로젝트 환경 안에서 해결(예: Drizzle 있으면 raw SQL 금지) | `agent:backend-convention-reviewer` | prose 유지(에이전트 점검) |
 | §6.8 최소 변경(minimal diff) | `prose` | prose 유지 |
 | §7 신규 프로젝트 스택·환경 먼저 합의 | `prose` | prose 유지 |
-| §8·§8.1 검증 후 다음 스텝(최소 기계 검증 사다리) | `hook:verify-on-stop`(`tsc --noEmit`, 옵션 테스트), `cmd:verify` — 타 에이전트는 §8.1 prose 로 직접 수행 | 결정론 졸업(타입체크 실패 시 block) |
+| §8·§8.1 검증 후 다음 스텝(최소 기계 검증 사다리 — 전제: 프로젝트가 `typecheck`·`test` 스크립트 제공, lint 는 설정된 경우만) | `hook:verify-on-stop`(`tsc --noEmit`, 옵션 테스트), `cmd:verify` — 타 에이전트는 §8.1 prose 로 직접 수행 | 결정론 졸업(타입체크 실패 시 block) |
 | §1.1 세션 시작 시퀀스(PROCESS.md 먼저 읽기) | `hook:session-context` — 타 에이전트는 §1.1 prose 로 직접 수행 | 결정론 졸업(주입은 기계적) |
 | §9 결과물 분류 저장(memory/history/bug/acknowledge/feedback/QA) | `cmd:save-docs`, `cmd:log-feedback` | prose 유지(기록은 사람 명령) |
 | §10 안티패턴(절대 금지) 상시 인지 | `hook:reinject-rules` | 결정론 졸업(주입은 기계적) |
@@ -93,6 +93,7 @@
 | §2 Prettier 포맷 | `hook:lint-edit`(편집 후 `prettier --write` 자동 실행) | 결정론 졸업(있으면 자동 포맷) |
 | §4 네이밍 규칙 | `agent:convention-reviewer` | prose 유지 |
 | §7 import 순서 / §8 path alias | `prose` (prettier/eslint 가 있으면 일부 정렬) | prose 유지 |
+| §11 로그(디버그 `console.log` 커밋 금지) | `agent:convention-reviewer` | prose 유지 |
 
 ---
 
@@ -114,9 +115,11 @@
 | §1 백엔드 env 는 `getEnv()` 만(`process.env` 직접접근 금지) | `hook:lint-edit (HARD)`(backend 경로 `process.env.` → block) | 결정론 졸업(백엔드 경로) |
 | §1·§1.1 `.env` 보호(에이전트 읽기/쓰기/출력/커밋 금지) | `permission`(`.env`·`.env.*`·`secrets/**` Read/Write/Edit → `deny`), `hook:guard-commit`(스테이지 `.env`/`secrets`/`.pem`/`id_rsa` 차단) — 타 에이전트는 §1.1 prose | 결정론 졸업 |
 | §2 외부 입력 경계 Zod 검증 | `agent:backend-convention-reviewer`, `agent:security-reviewer` | prose 유지 |
+| §2 파일 업로드 MIME·확장자·크기 화이트리스트 검증 | `agent:security-reviewer` | prose 유지 |
 | §3 Injection 방지(raw SQL 금지, path/command injection) | `agent:security-reviewer` | prose 유지 |
 | §4 XSS — `dangerouslySetInnerHTML` 은 sanitize 와 함께만(prose 명문화) | `hook:lint-edit (SOFT)`(sanitize/DOMPurify 없으면 경고) | 경고만 |
 | §5 인가는 서버 재확인(클라 의존 금지) | `agent:security-reviewer`, `agent:backend-convention-reviewer` | prose 유지 |
+| §5 남용 가능한 공개 엔드포인트 rate limit | `agent:security-reviewer` | prose 유지 |
 | §6 에러 `details` 프로덕션 비노출, 로그에 시크릿 금지 | `agent:security-reviewer` | prose 유지 |
 | §7 의존성 최신·취약점 점검 | `permission`(설치 명령 `ask`) | 경고만(설치 확인) |
 
@@ -135,7 +138,7 @@
 | §6 사용자 요청 전 커밋·푸시 금지 | `permission`(`git commit`/`git push`/`merge`/`rebase` → `ask`) | 결정론 졸업(확인질문) |
 | §6 `main`/`master` 직접 커밋 금지 | `hook:guard-commit`(현재 브랜치 main/master 면 `exit 2` — 합의된 레포는 `git config llm-rules.allow-main true` 또는 `LLM_RULES_ALLOW_MAIN=1` 로 이 검사만 생략) | 결정론 졸업 |
 | §6 시크릿·빌드 산출물 커밋 금지(`dist/`/`node_modules/`/`.env`/`.pem`/`id_rsa`) | `hook:guard-commit`(스테이지 검사 차단), `permission`(`git add .env` deny) | 결정론 졸업 |
-| §6.1 `Co-Authored-By`/Claude 트레일러 금지(author 사용자 단독) | `hook:guard-commit`(`co-authored-by\|generated with\|🤖\|claude<\|noreply@anthropic` 시 `exit 2`) | 결정론 졸업 |
+| §6.1 `Co-Authored-By`/Claude 트레일러·`Claude-Session:` 세션 링크 금지(author 사용자 단독) | `hook:guard-commit`(`co-authored-by\|generated with\|🤖\|claude<\|noreply@anthropic\|claude-session *:` 시 `exit 2` — 콜론 필수 매칭이라 prose 언급은 오탐 안 함) | 결정론 졸업 |
 | §6 `git push --force`/`-f` 금지 | `permission`(`git push --force`/`-f` → `deny`) | 결정론 졸업 |
 | §6 선별 스테이징(`git add -A`/`.` 금지)·커밋 전 status/diff 확인 | `prose` | prose 유지 |
 | §6 논리 단위 1커밋 | `prose` | prose 유지 |
@@ -153,10 +156,14 @@
 | §5 JSX inline(2줄 미만 inline 선호), `&&` 0-함정, key=안정 id(index 금지) | `agent:convention-reviewer` | prose 유지 |
 | §8.5 접근성 최소선(시맨틱·button/a 구분·alt·label) | `agent:convention-reviewer` | prose 유지 |
 | §2 서버/클라 분리, `'use client'` 명시 | `prose` | prose 유지 |
-| §6 상태(서버=TanStack Query, Context 는 provider 성격만, 전역상태 라이브러리 금지) | `agent:tanstack-query-reviewer` | prose 유지 |
+| §6 상태 사다리(서버=TanStack Query, Context 는 provider 성격 저빈도 값만, 그 외 전역 클라이언트 상태는 zustand 조건부 — 임의 라이브러리·서버 상태 store 반입 금지) | `agent:tanstack-query-reviewer` | prose 유지 |
+| §7.1 Server Actions(`entities/*.action.ts` + `'use server'` + Zod 재검증 + revalidate/invalidate) | `agent:security-reviewer`(입력 검증), `prose` | prose 유지 |
 | §8.1 스타일(Tailwind/shadcn/CVA/`cn()`) | `prose` | prose 유지 |
 | §8.2 에러 피드백 `sonner` toast | `prose` | prose 유지 |
 | §8.4 폼(react-hook-form + zodResolver + shadcn Form) | `agent:convention-reviewer` | prose 유지 |
+| §8.6 i18n(프로젝트별 선택 + `docs/acknowledge` 기록, 메시지 카탈로그) | `prose` | prose 유지 |
+| §9 이미지 `next/image` 기본 | `prose` | prose 유지 |
+| §11 테스트(`bun:test` + Testing Library, E2E Playwright 합의) | `permission`(`bun test` allow), `prose` | prose 유지 |
 | default export 는 page/layout 만 | `hook:lint-edit (SOFT)` | 경고만 |
 
 ---
@@ -180,7 +187,7 @@
 | 규칙 | → 메커니즘 | 등급 |
 |---|---|---|
 | §1 기본 `staleTime: 60_000` 명시 | `agent:tanstack-query-reviewer` | prose 유지 |
-| §2 `QUERY_KEY` 중앙관리(항상 배열, 파라미터 정렬 직렬화, 인라인 키 금지) | `agent:tanstack-query-reviewer`, `cmd:audit-query` | prose 유지 |
+| §2 `QUERY_KEY` 중앙관리(항상 배열, 도메인 계층 키 + 파라미터 객체 그대로 — v5 결정적 해싱, 인라인 키 금지) | `agent:tanstack-query-reviewer`, `cmd:audit-query` | prose 유지 |
 | §3 쿼리 훅 위치(`entities/<entity>.query.ts`, `'use client'`) | `agent:tanstack-query-reviewer` | prose 유지 |
 | §4 `queryOptions` 팩토리 + `useQuery`(queryKey=QUERY_KEY, 타입 자동 추론, `enabled`) | `agent:tanstack-query-reviewer` | prose 유지 |
 | §5 `useMutation`(`onSuccess` 무효화 + toast, `onError` toast, 무효화는 entities 훅 책임 기본) | `agent:tanstack-query-reviewer` | prose 유지 |
@@ -199,11 +206,12 @@
 | §2 Factory DI(`createXxxService`, `ReturnType` 타입) | `agent:backend-convention-reviewer` | prose 유지 |
 | §2.2 Drizzle 쿼리는 compose 에 격리 | `agent:backend-convention-reviewer` | prose 유지 |
 | §4 Route 팩토리 + OpenAPI, 모든 핸들러 `withErrorHandling` | `agent:backend-convention-reviewer` | prose 유지 |
-| §5 DTO 는 Zod 스키마 + `z.infer` 타입(공통은 `dto/common.ts`, boolean 쿼리는 enum+transform) | `agent:type-utility-reviewer`, `agent:backend-convention-reviewer` | prose 유지 |
+| §5 DTO 는 Zod 스키마 + `z.infer` 타입(공통은 `dto/common.ts`, boolean 쿼리는 Zod 4 `z.stringbool()`/Zod 3 enum+transform — `z.coerce.boolean()` 금지) | `agent:type-utility-reviewer`, `agent:backend-convention-reviewer` | prose 유지 |
 | §6 에러 3-파일 중앙화(code/message/error) | `agent:backend-convention-reviewer` | prose 유지 |
-| §7 HOF(`withErrorHandling`/`withAuth`/`withAdmin`) | `agent:backend-convention-reviewer` | prose 유지 |
+| §7 HOF(`withErrorHandling`/`withAuth`/`withAdmin`/`withApiToken`) | `agent:backend-convention-reviewer` | prose 유지 |
 | §8 응답 헬퍼(`successResponse`/`paginatedResponse`/`errorResponse`) | `agent:backend-convention-reviewer` | prose 유지 |
 | §10 Drizzle(싱글톤, snake_case 컬럼/camelCase 필드, `$inferSelect`) | `agent:backend-convention-reviewer` | prose 유지 |
+| §10.4 마이그레이션 운영(`generate`→`migrate`, 프로덕션 `push` 금지 — push 운영 중 DB 는 질문 후 결정) | `agent:backend-convention-reviewer` | prose 유지 |
 | §13 테스트(`bun:test`, 한국어 설명) | `permission`(`bun test` allow), `hook:verify-on-stop`(`LLM_RULES_STOP_TEST=1` 시) | 경고만(테스트는 옵션) |
 
 ---
@@ -214,6 +222,7 @@
 |---|---|---|
 | §1 IPC 는 타입 계약(`EVENTS_TYPE` 단일 출처, `Parameters`/`ReturnType` 유도) | `agent:desktop-security-reviewer` | prose 유지 |
 | §1 권한 최소화(preload bridge 로만 노출) | `agent:desktop-security-reviewer` | prose 유지 |
+| §2.3 보안 기본값(`contextIsolation: true`·`nodeIntegration: false`·`sandbox: true`, `contextBridge` 만, `shell.openExternal` 검증) | `agent:desktop-security-reviewer` | prose 유지 |
 | 렌더러 = frontend 규칙 그대로 적용 | frontend.md 의 메커니즘 전부 상속(`hook:lint-edit` 등) | 상속 |
 | §2 Electron 구조 / §3 Tauri(예정) | `prose` | prose 유지 |
 

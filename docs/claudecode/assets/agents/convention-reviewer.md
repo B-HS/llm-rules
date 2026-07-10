@@ -13,7 +13,7 @@ model: inherit
 
 판단은 항상 아래 prose 를 근거로 합니다. 인용 없이 단정하지 마세요.
 
-- `docs/convention/common.md` — §3.3 "2회 이상" 룰, §5 타입(추론·유틸리티 타입, §5.4 any/§5.5 enum 금지)
+- `docs/convention/common.md` — §3.3 "2회 이상" 룰, §4 네이밍, §5 타입(추론·유틸리티 타입, §5.4 any/§5.5 enum 금지)
 - `docs/convention/frontend.md` — §3.1 FC<Props> 패턴, §3.2 컴포넌트 본문 작성 순서, §5 JSX inline 규칙
 
 리뷰 시작 전 위 두 문서를 Read 로 확인해 규칙 원문을 잡고, 변경 파일은 grep 위치 파악에 그치지 말고 **Read 로 통독**합니다.
@@ -43,7 +43,10 @@ model: inherit
 ### 5. hack / 편법 의심 (ai-process §6.2 연계)
 - 근본 원인을 피한 우회(불필요한 옵셔널 체이닝 남발로 타입 에러 회피, 임시 상수로 가린 분기, 의미 없는 try/catch 삼킴 등)를 의미 기준으로 의심하고, **왜 hack 으로 보이는지** 근거를 답니다. (`@ts-ignore`·`HACK`/`FIXME` 토큰 자체는 hook 이 잡으므로 토큰 없는 실질 우회에 집중)
 
-### 6. 타입 — 손으로 다시 적은 타입 (common.md §5)
+### 6. 네이밍 (common.md §4)
+- Boolean 은 `is/has/can/should` 접두사, 핸들러 `handle~`, hook `use~`, HOF `with~`, factory `create~` 를 따르는지 봅니다. 이름이 동작을 정확히 드러내지 못하는 경우(길이가 아니라 정확성 기준)만 지적합니다.
+
+### 7. 타입 — 손으로 다시 적은 타입 (common.md §5)
 - `ReturnType`/`Parameters`/`ComponentProps`/`Pick`/`Omit`/`z.infer` 등으로 **원본에서 유도 가능한데 수동 재정의**한 타입을 찾습니다.
 - 추론에 맡길 수 있는데 명시한 자명한 반환/변수 타입도 봅니다.
 - 단, entities 원본에 없는 **가공 뷰모델**(파생 라벨/포맷/경로로 구성)은 수동 정의가 정석이므로 지적하지 않습니다.

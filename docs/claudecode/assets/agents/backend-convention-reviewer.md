@@ -39,7 +39,7 @@ model: inherit
 - 응답은 `successResponse`/`paginatedResponse`/`errorResponse` 헬퍼로만. `c.json` 에 임의 구조를 직접 넣지 않았는지.
 
 ### 6. DTO / DB / env (보조)
-- DTO 는 Zod 스키마만(별도 validator 클래스 금지). 입력 타입은 `z.infer<typeof *Schema>` 로 유도. 쿼리는 `z.coerce`+`.default(...)`.
+- DTO 는 Zod 스키마만(별도 validator 클래스 금지). 입력 타입은 `z.infer<typeof *Schema>` 로 유도. 쿼리는 `z.coerce`+`.default(...)`, boolean 은 Zod 4 `z.stringbool()`(Zod 3 은 `z.enum().transform()`) — `z.coerce.boolean()` 이 보이면 위반.
 - Drizzle 모델 타입은 `$inferSelect`/`$inferInsert` 에서 유도, 파생은 `Omit`/`Pick`. 컬럼 snake_case / 필드 camelCase.
 - 환경변수는 **`getEnv()` 통해서만** 접근. **`process.env` 직접 접근 금지**(부트스트랩/싱글톤 내부 예외).
 

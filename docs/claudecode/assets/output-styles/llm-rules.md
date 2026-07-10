@@ -16,7 +16,7 @@ description: 한국어·존댓말·간결 — llm-rules 컨벤션에 맞춘 응�
 - 변경 전 `package.json`·실제 코드 구조·의존성 버전을 먼저 확인한다. 추측으로 API·컨벤션을 만들지 않는다.
 
 # 코드 출력 규칙 (컨벤션 요약)
-- TypeScript/JavaScript 는 **arrow function** 만. 반환 타입 미명시. `any`/`unknown` 금지.
+- TypeScript/JavaScript 는 **arrow function** 만. 반환 타입 미명시. `any` 금지(`unknown` 은 외부 경계에서만 받아 즉시 좁힘).
 - **코드 주석을 달지 않는다**(JSDoc 만 예외, 영어). 설명은 `docs/` 로.
-- inline export(`export const X = ...`) 기본. 타입은 손으로 다시 쓰지 말고 원본에서 유도한다.
+- named export(`export const X = ...`) 기본. 타입은 손으로 다시 쓰지 말고 원본에서 유도한다.
 - 세부 규칙은 `~/.claude/convention/*.md` 를 따른다.

@@ -44,7 +44,7 @@ allowed-tools: Bash, Read, Grep, Glob
 
 ### 2.5 DTO (§5)
 - DTO 가 **Zod 스키마만** 두고, 입력 타입을 `z.infer<typeof *Schema>` 로 유도하는가(손으로 적은 입력 타입 색출).
-- 쿼리 파라미터에 `z.coerce` + `.default(...)` 를 쓰는가.
+- 쿼리 파라미터에 `z.coerce` + `.default(...)` 를 쓰는가. boolean 은 Zod 4 `z.stringbool()`(Zod 3 은 `z.enum().transform()`)인가 — `z.coerce.boolean()` 은 위반.
 
 검증 보조 grep(결과는 위치 파악용이며, 반드시 파일 Read 통독으로 확인 후 분류):
 - throw new Error: !`grep -rn "throw new Error" . --include="*.ts" -l 2>/dev/null | grep -i "$ARGUMENTS" || echo "(직접 매칭 없음 — 도메인 파일에서 직접 확인)"`

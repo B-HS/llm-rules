@@ -11,10 +11,10 @@ model: inherit
 
 작업 범위의 `*.query.ts`(또는 `useQuery`/`useMutation`/`QUERY_KEY` 사용처)를 통독한 뒤 아래를 의미 단위로 판단합니다.
 
-### 1. 쿼리 키 granularity / 직렬화 (query.md 2·3)
+### 1. 쿼리 키 granularity / 구조 (query.md 2·3)
 - 키를 컴포넌트에 인라인 배열로 직접 적지 않고 **`shared` 의 `QUERY_KEY` 팩토리**에서 가져오는가.
-- 파라미터 없는 키는 정적 값, **파라미터 있는 키는 함수**(`GET: (id) => [...]`)로 만드는가.
-- 목록/필터/검색 쿼리는 **모든 식별 파라미터가 키에 직렬화**되는가. 누락 시 서로 다른 조회가 같은 캐시를 공유해 잘못된 슬라이스가 보임. 반대로 무관한 값까지 키에 넣어 **불필요하게 캐시가 쪼개지는지**(granularity 과대)도 본다.
+- **도메인 → 동작 → 파라미터 계층 구조**(`['post', 'list', params]`)인가. 파라미터 없는 키는 정적 값, **파라미터 있는 키는 함수**(`DETAIL: (id) => [...]`)로 만드는가.
+- 목록/필터/검색 쿼리는 **모든 식별 파라미터가 키에 포함**되는가(객체를 그대로 넣는다 — v5 결정적 해싱이라 속성 순서 무관, 수동 직렬화는 위반). 누락 시 서로 다른 조회가 같은 캐시를 공유해 잘못된 슬라이스가 보임. 반대로 무관한 값까지 키에 넣어 **불필요하게 캐시가 쪼개지는지**(granularity 과대)도 본다.
 - 키 요소의 **타입·순서가 일관**적인가(숫자 id를 한 곳은 number, 다른 곳은 String() 등으로 다르게 넣으면 키 불일치 → 캐시 미스/중복 refetch). 무효화 키와 조회 키가 **같은 팩토리**를 쓰는가.
 
 ### 2. invalidateQueries 무효화 범위 (query.md 5)
@@ -35,6 +35,10 @@ model: inherit
 ### 5. 위치 / 네이밍 / queryOptions (query.md 3·4)
 - 훅이 `entities/<entity>.query.ts` 에 있고 최상단 `'use client'`, 요청은 `*.api.ts`/`clientFetch` 경유인가. 이름은 `use` + 동작 + Feature 인가.
 - 조회 옵션이 **`queryOptions` 팩토리**(`<entity>QueryOptions`)로 정의되어 `useQuery`·프리페치(§6)·무효화가 재사용하는가. 같은 키/fn 정의가 여러 곳에 중복되면 위반.
+
+### 6. 서버 상태의 경계 (frontend.md 6)
+- **서버 상태가 zustand store 나 Context 로 새지 않는가** — 서버 데이터는 TanStack Query 만 담당한다. 쿼리 결과를 store 에 복사해 두는 패턴은 위반.
+- zustand store 가 있으면 **실수요 조건**(고빈도 갱신·위젯 간 공유, Context/`useState` 로 불가)에 해당하는지, 도입 기록(`docs/acknowledge`)이 있는지 확인한다. redux·jotai 등 다른 전역 상태 라이브러리는 위반.
 
 ## 출력 형식
 
