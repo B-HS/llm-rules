@@ -57,7 +57,7 @@
 |------|------|
 | `Read(./.env)`, `Read(./.env.*)`, `Read(./**/.env)`, `Read(./**/.env.*)` | `.env` 파일 읽기 금지 |
 | `Read(./secrets/**)` | `secrets/` 디렉토리 읽기 금지 |
-| `Write(./.env)`, `Write(./.env.*)`, `Edit(./.env)`, `Write(./secrets/**)` | `.env`·`secrets/` 쓰기/수정 금지 |
+| `Edit(./.env)`, `Edit(./.env.*)`, `Edit(./secrets/**)` | `.env`·`secrets/` 쓰기/수정 금지 (파일 권한 검사는 `Edit(path)` 규칙만 매칭하며 Write/Edit/MultiEdit 모두 커버) |
 | `Bash(rm -rf:*)` | 재귀 강제 삭제 금지 |
 | `Bash(git add .env:*)` | `.env` 스테이징 금지 |
 | `Bash(git push --force:*)`, `Bash(git push -f:*)` | 강제 푸시 금지 |
