@@ -147,9 +147,10 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 세션 시작/재개 시:
 
 1. **`docs/` 디렉토리를 보장**(`mkdir -p docs`) — comments.md §3 / ai-process.md §1.
-2. 컨벤션 핵심 요약을 컨텍스트로 만듭니다. **요약 문구의 단일 출처는 스크립트(`session-context.sh`)의 주입 텍스트**이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다. (주제: 함수·타입·주석·매직넘버/이모지·export·FSD/쿼리·커밋·시크릿·검증·질문 방식)
-3. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
-4. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
+2. **컨벤션 문서 위치를 자동 감지**해 `세부:` 라인에 반영합니다. 우선순위: `LLM_RULES_CONVENTION_DIR` 환경변수 → 프로젝트 `$CLAUDE_PROJECT_DIR/.claude/convention` (미설정 시 cwd 기준) → 글로벌 `~/.claude/convention`. 각 후보는 `index.md` 존재 여부로 검증하며, 어디에도 없으면 경로 대신 **미설치 안내**를 주입합니다.
+3. 컨벤션 핵심 요약을 컨텍스트로 만듭니다. **요약 문구의 단일 출처는 스크립트(`session-context.sh`)의 주입 텍스트**이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다. (주제: 함수·타입·주석·매직넘버/이모지·export·FSD/쿼리·커밋·시크릿·검증·질문 방식)
+4. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
+5. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
 
 **커버 규칙**: ai-process.md §1·§14(`docs/PROCESS.md` 기반 작업, 세션 간 연속성).
 
