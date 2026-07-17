@@ -208,3 +208,15 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 - [x] 커밋·푸시 (사용자 요청) — feat(convention) / feat(claudecode) / docs(process) 3커밋
 
 기록: 이전 결정 번복 2건 확정 — ⑤ Context provider 한정(→ zustand 조건부 허용), ⑥ QUERY_KEY 정렬 직렬화(→ 계층 키 + 객체 그대로, v5 결정적 해싱 공식 확인). 범위 밖 관찰이던 claudecode 문서의 타 머신 절대경로 하드코딩(hooks.md·agents.md 3곳)은 사용자 지시로 후속 커밋에서 레포 상대 경로로 정리 완료.
+
+---
+
+## 작업: session-context.sh 컨벤션 경로 자동 감지 (완료)
+
+사용자 확인 — 훅이 `~/.claude/convention/*.md` 를 하드코딩해, 미설치/프로젝트 설치/커스텀 경로에서 유령 경로를 안내하던 문제. 선택지 제시 후 [1] 자동 감지 + env 오버라이드로 결정.
+
+- [x] `assets/hooks/session-context.sh` — `세부:` 경로 자동 감지: `LLM_RULES_CONVENTION_DIR` → `$CLAUDE_PROJECT_DIR/.claude/convention`(미설정 시 cwd) → `~/.claude/convention` 순. 각 후보는 `index.md` 존재로 검증, 전부 없으면 미설치 안내 문구로 대체. 홈 하위 경로는 `~` 표기
+- [x] `assets/output-styles/llm-rules.md` — 하드코딩 경로 2곳을 "세션 컨텍스트의 `세부:` 경로" 참조로 교체
+- [x] `docs/claudecode/hooks.md` §5 — 감지 우선순위·미설치 동작 문서화
+- [x] 로컬 설치본 동기화 — `~/.claude/hooks/llm-rules/session-context.sh`, `~/.claude/output-styles/llm-rules.md`
+- [x] 검증 — `bash -n` + 기능 테스트 5케이스(미설치/글로벌/프로젝트 우선/env 오버라이드/무효 env 폴스루) 통과. 이 머신은 convention 미설치 상태라 훅이 미설치 안내를 정확히 출력함 (`bun run sync` 실행 시 해소)
