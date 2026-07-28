@@ -220,3 +220,97 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 - [x] `docs/claudecode/hooks.md` §5 — 감지 우선순위·미설치 동작 문서화
 - [x] 로컬 설치본 동기화 — `~/.claude/hooks/llm-rules/session-context.sh`, `~/.claude/output-styles/llm-rules.md`
 - [x] 검증 — `bash -n` + 기능 테스트 5케이스(미설치/글로벌/프로젝트 우선/env 오버라이드/무효 env 폴스루) 통과. 이 머신은 convention 미설치 상태라 훅이 미설치 안내를 정확히 출력함 (`bun run sync` 실행 시 해소)
+
+---
+
+## 작업: /prepare-new 세션 핸드오프 커맨드 추가 (완료)
+
+사용자 요청 — 세션 종료 전 컨텍스트를 docs/ 로 고정(Phase 0 인벤토리 → 정합성 검증 → docs 최신화 → HANDOFF.md → 유실 검증 → 재개 프롬프트)하는 커맨드. 호출명은 네임스페이스 없는 `/prepare-new` 로 확정 → 커맨드 설치 경로 이원화(기존 8개는 `commands/llm-rules/` 네임스페이스, prepare-new 는 `commands/` 루트).
+
+- [x] `docs/claudecode/assets/commands/prepare-new.md` 신설 — 사용자 제공 스펙 그대로 (frontmatter: description·argument-hint·disable-model-invocation)
+- [x] `scripts/install-claude-code.ts` — `ROOT_COMMANDS`/`ROOT_COMMANDS_DEST` 신설, `copyTree` 에 skip 파라미터. 루트 커맨드는 네임스페이스 복사에서 제외 후 `commands/` 루트에 개별 복사(rm -rf 없음 — 사용자의 다른 커맨드 보존)
+- [x] `install-files/install-claude-code.sh` — `ROOT_COMMANDS` 목록 + 루트 복사 루프. `bash -n` 통과
+- [x] 문서 — `claudecode/commands.md`(9개로 갱신·한눈에 보기 행·"세션 핸드오프 커맨드" 섹션 신설) · `claudecode/index.md`(루트 커맨드 안내)
+- [x] `.prettierrc` 신설 — lint-edit 훅이 prettier config 부재로 기본 스타일(2칸·더블쿼트·세미콜론) 전체 재포맷하던 문제의 근본 해결. `common.md §2` 표 값 inline(감사 B4 결정과 동일 방침). 부수: `install-claude-code.ts` 2곳(체인 줄바꿈·150자 초과 줄)이 레포 설정 기준으로 정규 포맷됨
+- [x] 로컬 글로벌 설치 — dry-run(8+1 분리 확인) 후 실설치: `~/.claude/commands/prepare-new.md` 배치. 새 세션부터 `/prepare-new` 사용 가능
+- 참고: 원격(curl) 설치는 release 번들(docs+install-files) 기반 → main push 후 다음 릴리스부터 자동 포함. README 는 사용자 지시 전 미수정 원칙 유지
+
+---
+
+## 작업: docs/ 갱신 훅 점검 — reinject-rules 리마인더 보강 (완료)
+
+사용자 지적 — "각 스텝마다 docs/ 고도화하는 훅이 안 도는 느낌". 점검 결과 훅 고장이 아니라 **해당 역할의 훅이 부재**: docs 갱신은 prose(ai-process §2·§9) + 수동 커맨드(process·save-docs)뿐이고, 훅의 docs 동작은 session-context 의 읽기(주입)와 mkdir 이 전부. 추가로 enforcement.md:251 이 reinject-rules 가 작업 프로세스를 "보강"한다고 주장하지만 실제 주입 문구에 docs/PROCESS 항목이 없던 문서-구현 불일치 확인. 6개 훅 자체는 이 세션에서 전부 실동작 확인(주입·재포맷·Stop block).
+
+사용자 결정 — 선택지(Stop 차단+리마인더 / Stop만 / 리마인더만 / 현행+문서정정) 중 **리마인더만(soft)**.
+
+- [x] `assets/hooks/reinject-rules.sh` — 주입 문구에 "스텝마다 docs/PROCESS.md 체크 갱신, 작업 끝나면 docs/ 분류 저장(/llm-rules:process·save-docs)" 추가
+- [x] `enforcement.md` — ai-process §2·§9 매핑 행에 `hook:reinject-rules` 보강 반영 (251행 클레임과 실제가 일치하게 됨). hooks.md 는 "문구 단일 출처 = 스크립트" 원칙이라 무변경
+- [x] 검증·동기화 — `bash -n` + 실행 JSON 출력 확인, `~/.claude/hooks/llm-rules/` 설치본 diff 일치. 다음 프롬프트부터 적용
+
+---
+
+## 작업: session-context 에 "작업 개시 프로토콜" 5칙 주입 (완료)
+
+사용자 요청 — SessionStart(세션당 1회) 시점에 5칙을 주입: ① 프롬프트 정확 분석 + 애매한 점 사전 질문 ② 사소한 애매함도 물어 확정 후 진행 ③ 스택 미명시 시 컨벤션 기본 + 후보 기능의 장단점을 짧게 요약해 합의 ④ 확정 내용은 docs/ 에도 기록 ⑤ 전긍정 금지·기술 타당성 객관 판단.
+
+- [x] `assets/hooks/session-context.sh` — ctx 에 `[작업 개시 프로토콜 — 세션 첫 요청부터 적용]` 블록 추가 (컨벤션 요약과 PROCESS.md 주입 사이)
+- [x] `hooks.md` §5 — 동작 요약·주입 단계(4번 신설, 5→6 renumber)·커버 규칙(§3·§4·§7 보강) 갱신. 원문 단일 출처 = 스크립트 원칙 유지
+- [x] `enforcement.md` — ai-process §3(멈춤)·§7(신규 스택 합의) 행에 `hook:session-context`(작업 개시 프로토콜) 보강 반영
+- [x] 검증·동기화 — `bash -n` + 실행 JSON 에 블록 포함 확인, `~/.claude/hooks/llm-rules/` 설치본 diff 일치. 다음 새 세션(startup·resume)부터 주입. matcher 는 기존 `startup|resume` 유지(clear·compact 확장은 미결정)
+
+---
+
+## 작업: 주입 프롬프트 점검·고도화 10건 (완료)
+
+주입 프롬프트 3종(session-context·reinject-rules·/prepare-new) 점검 후 결정 리스트 10건 제시, 사용자 항목별 지시대로 반영. 결정: 1 통합 / 2 질문 방식 보강 / 3 스택 합의 범위 한정 / 4 기록처 구체화 / 5 근거+대안 보강 / 6 요약 1줄 추가 / 7 reinject 유지 / 8 matcher 확장 / 9 prepare-new 를 §9 분류로 정렬 / 10 이모지 제거.
+
+- [x] `assets/hooks/session-context.sh` — 프로토콜 5칙→4칙: ①(구1+2 통합) 사소한 애매함도 사전 질문 + "한 번에 모아 객관식, 애매함 없으면 바로 진행" ②(구3) "신규 프로젝트·새 기능/라이브러리 도입 시"로 한정(기존 레포 스택 재논의 방지, ai-process §6.7 정합) ③(구4) 기록처 구체화(결정=docs/acknowledge, 상태=PROCESS.md) ④(구5) "문제 시 근거+대안 제시" 추가. 컨벤션 요약에 "FC<Props>·SFC·본문 순서 useRef→useState→함수/로직→useEffect" 1줄 추가
+- [x] matcher 확장 — `assets/settings.json` SessionStart `startup|resume` → `startup|resume|clear|compact` (컴팩션·/clear 후 주입 유실 방지). 문서 4곳(hooks.md §5·요약표, index.md, settings.md) 동반 갱신
+- [x] `assets/commands/prepare-new.md` — Phase 2 최소 문서에서 `DECISIONS.md` 제거 → `docs/acknowledge/`(결정 1건=파일 1개, ai-process §9 분류 준수·병렬 체계 금지 명시), Phase 3 템플릿 링크 동반 수정. 이모지 3곳(경고 접두·X/O) 텍스트 치환. commands.md 설명 동기화
+- [x] `enforcement.md` — 프로토콜 renumber(§3→1, §7→2) 반영
+- [x] 검증·동기화 — `bash -n`·실행 JSON·settings jq valid·이모지 잔존 0 확인. 로컬 설치본: 훅·커맨드 cp + `install-claude-code --global --settings` 재병합(설치된 matcher `startup|resume|clear|compact` 확인)
+- reinject-rules 는 무변경(7 유지). 향후 리마인더 추가는 reinject 가 아닌 session-context(1회) 우선 원칙
+
+---
+
+## 작업: 커밋·푸시 세션 시작 위임(optional) 규칙화 (완료)
+
+사용자 요청 — "요청 전 commit/push 금지"를 세션 시작 시 옵셔널로 위임 합의할 수 있게. SSOT 먼저 수정 후 enforce 레이어 동기화(레포 철학).
+
+- [x] `convention/git.md` §6 — 예외 조항 신설: 커밋이 예상되는 세션이면 첫 확인 질문 묶음에 진행 방식 포함(① 매번 확인=기본 ② 커밋 위임·푸시 확인 ③ 커밋+푸시 위임). 합의는 `docs/acknowledge` 기록·그 세션 한정, 미합의 시 ①. 위임해도 형식·논리 단위·선별 스테이징·§6.1 유지
+- [x] `convention/ai-process.md` — §10 안티패턴·§11 체크리스트에 예외 문구 반영
+- [x] `assets/hooks/session-context.sh` — 작업 개시 프로토콜 5번 신설(위임 확인·acknowledge 기록·기본값 동작) + 컨벤션 요약 커밋 라인에 "(세션 위임 합의 시 예외)"
+- [x] `assets/hooks/reinject-rules.sh` — 리마인더 동일 예외 표기
+- [x] `agents-core.md` — 절대금지·git 섹션 2곳 예외 반영 (타 에이전트 이식성)
+- [x] `enforcement.md` git §6 행·`hooks.md` §5(프로토콜 4→5칙) 갱신
+- [x] 전파 — 훅 2종 `~/.claude/hooks/llm-rules/` cp, `bun run sync --yes`(convention 11개 → `~/.claude/convention`, git.md diff 일치), `init-agents --global all`(코어 18.5KB<32KiB, codex·opencode·pi)
+- [x] 검증 — `bash -n` 2종·주입 JSON 에 위임 선택지 포함 확인
+- 참고: permissions ask(`git commit`/`push`)는 하네스 레이어라 별개 — 위임 세션에서도 첫 실행 시 권한 프롬프트 1회는 뜨며 "세션 동안 허용" 선택으로 해소. ask 영구 제거는 안전상 유지 권장
+- 부수: sync 케이스 C 로 `~/.claude/CLAUDE.md` 에 관리 블록 추가됨 — 기존 수동 import 목록과 중복(무해, Claude Code 는 1회만 로드). 정리 여부 사용자 확인 대기
+
+---
+
+## 작업: 자동커밋/푸시 — 권한 프롬프트 세션 초반 결정 + co-author 훅 확인 (완료)
+
+사용자 정정 — 앞선 "세션 위임"은 오해였고 실제 요구는 ① **하네스 권한 프롬프트**("실행하시겠습니까?")를 처음에 자동/수동으로 정해 생략, ② co-author 차단 훅. ②는 기존 `guard-commit.sh` 가 이미 수행(트레일러 exit 2 — 스모크 테스트로 재확인). ①은 사용자 결정: **레포 단위 git config + 커밋/푸시 각각 키**.
+
+- [x] `guard-commit.sh` — 검사 5단계 추가: `git config llm-rules.auto-commit true` 레포는 **전 검사(형식·트레일러·시크릿·main) 통과 시** `permissionDecision:"allow"` 출력 → ask 프롬프트 생략
+- [x] `guard-push.sh` 신설(7번째 훅) — force push 를 **플래그 위치 무관** exit 2 차단(permission deny 는 접두 매칭이라 `git push origin main --force` 못 잡는 구멍 보완). `llm-rules.auto-push true` 레포의 비-force 푸시는 자동 승인, `--force-with-lease` 는 차단하지 않되 자동 승인도 제외(항상 확인)
+- [x] `assets/settings.json` — PreToolUse Bash 에 guard-push 연결(`if "Bash(git push*)"`). `install-claude-code.sh` HOOKS 목록·ts 메뉴(7종) 갱신
+- [x] SSOT 재정렬 — `git.md` §6 예외를 "세션 한정 위임" → **auto-commit/push git config 합의**로 교체, `ai-process.md` §10·§11, `agents-core.md` 2곳, `session-context.sh` 프로토콜 5(미설정 레포 첫 확인 때 자동/수동 확정 후 config 기록)·요약, `reinject-rules.sh` 문구 동기화
+- [x] CC 문서 — `enforcement.md`(메커니즘 표 guard-push 행, git §6 두 행), `hooks.md`(7개·§1 자동커밋 단락·§7 guard-push 신설·요약표), `index.md`(표·7개)
+- [x] 검증 — 기능 테스트 8케이스 전부 기대 일치(auto 미설정 무출력/auto allow JSON/트레일러 차단/후치 force·-f 차단/force-with-lease 확인 유지). 테스트 중 설치본 guard-commit 이 테스트 명령 문자열의 `git commit` 을 잡아 차단한 건 오탐이지만 정상 동작(테스트를 파일 실행으로 우회)
+- [x] 전파 — 훅 4종 cp + settings 재병합(설치본에 guard-push 배선 확인) + `sync --yes`(케이스 B 멱등) + `init-agents --global all`
+- [x] 이 레포 `llm-rules.allow-main` 이 기록과 달리 비어 있어 **합의대로 복원**(`git config llm-rules.allow-main true`)
+- 사용법: 합의 레포에서 `git config llm-rules.auto-commit true`(·`auto-push`) → 가드 통과 커밋(·푸시)은 확인 없이 진행. 해제는 `git config --unset`
+
+---
+
+## 작업: 릴리스 전 전수 재점검 (완료)
+
+- [x] 잔존 구표현 0 — "세션 위임/세션 한정/DECISIONS" grep 청정(의도적 금지 문구 1건 제외), 개수 표기(7 hooks·9 commands) 문서 전체 일치
+- [x] 미반영 발견·수정 3곳 — `settings.md` ask 행(guard-push·auto 승인)·PreToolUse 표(guard-push 행 추가)·다층 방어 문구, `enforcement.md` 마스터 요약(force push 행 신설·auto 합의 승인)
+- [x] 검증 — 훅 7종 `bash -n`, settings 템플릿 jq valid, `bun run typecheck` 통과, 설치본 훅 7개, 풀 dry-run(7 hooks/8+1 commands/7 agents/output-style) 정상
+- [x] README 는 stale 2곳(hooks (6)·커맨드 목록에 prepare-new 없음) — 미수정 원칙이라 사용자 결정 대기
+- 배포 확인: main push → release.yml 이 `docs/`·`install-files/` 변경 감지 → 버전 자동 산정 + `llm-rules.tar.gz`(docs+install-files) 릴리스 → curl 설치 스크립트가 latest 번들 다운로드. 새 머신 설치 = install.sh(컨벤션) + install-claude-code.sh(훅·커맨드·에이전트·settings) (+ 선택 init-agents.sh)
+- [x] 최종 결정 4건(사용자): 분할 커밋+푸시 진행 / README 갱신(hooks 7·prepare-new) / `~/.claude/CLAUDE.md` 수동 import 제거(관리 블록만 유지) / 이 레포 auto-commit+auto-push true. 결정 상세: `docs/acknowledge/2026-07-29-claudecode-handoff-autocommit.md`
