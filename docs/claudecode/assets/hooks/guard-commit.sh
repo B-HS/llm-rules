@@ -2,6 +2,8 @@
 # guard-commit.sh — PreToolUse(Bash, if Bash(git commit*))
 # git.md §1·§2·§3·§6 + 개인 절대규칙(Co-Authored-By 금지) 을 결정론적으로 강제한다.
 # 차단: exit 2 (+stderr 가 Claude 에게 전달). 통과: exit 0. 파싱 실패는 fail-open(허용).
+# 자동커밋: git config llm-rules.auto-commit true 인 레포는 전 검사 통과 시
+#           permissionDecision=allow 를 출력해 하네스 권한 프롬프트를 생략한다 (git.md §6 예외).
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -57,5 +59,11 @@ if [ -n "$header" ]; then
         block "Conventional Commits 형식이 아닙니다: '$header_line'  (형식: <type>(scope)?: 설명 / type ∈ ${types})"
     fi
 fi
+
+# --- 5. 자동커밋 합의 레포 — 전 검사 통과 시 권한 프롬프트 생략 (git §6 예외) ---
+auto_commit="$(git config --get llm-rules.auto-commit 2>/dev/null || echo '')"
+case "$auto_commit" in
+    1 | true) jq -nc '{hookSpecificOutput:{hookEventName:"PreToolUse", permissionDecision:"allow", permissionDecisionReason:"llm-rules auto-commit 합의 레포 — 가드 검사 통과"}}' ;;
+esac
 
 exit 0

@@ -14,8 +14,9 @@ REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
 VERSION="${LLM_RULES_VERSION:-latest}"
 [ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
 
-HOOKS="guard-commit.sh lint-edit.sh scan-secrets.sh verify-on-stop.sh session-context.sh reinject-rules.sh"
+HOOKS="guard-commit.sh guard-push.sh lint-edit.sh scan-secrets.sh verify-on-stop.sh session-context.sh reinject-rules.sh"
 COMMANDS="audit-conventions audit-fsd audit-backend-domain audit-query verify process save-docs log-feedback"
+ROOT_COMMANDS="prepare-new"
 AGENTS="convention-reviewer fsd-dependency-reviewer type-utility-reviewer backend-convention-reviewer security-reviewer tanstack-query-reviewer desktop-security-reviewer"
 
 command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
@@ -90,6 +91,7 @@ if has_item commands; then
     mkdir -p "$CLAUDE_DIR/commands/llm-rules"
     echo "▶ commands"
     for c in $COMMANDS; do dl "commands/$c.md" "$CLAUDE_DIR/commands/llm-rules/$c.md"; echo "  ✓ /llm-rules:$c"; done
+    for c in $ROOT_COMMANDS; do dl "commands/$c.md" "$CLAUDE_DIR/commands/$c.md"; echo "  ✓ /$c"; done
 fi
 if has_item agents; then
     mkdir -p "$CLAUDE_DIR/agents"

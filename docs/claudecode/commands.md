@@ -1,6 +1,6 @@
-# 슬래시 커맨드 (`/llm-rules:*`)
+# 슬래시 커맨드 (`/llm-rules:*` · `/prepare-new`)
 
-llm-rules Claude Code 에디션이 설치하는 **8개 슬래시 커맨드**입니다. 모두 `/llm-rules:` 네임스페이스를 쓰며, 설치 위치는 `<claudeDir>/commands/llm-rules/` 입니다. 각 커맨드는 컨벤션 prose(SSOT: `docs/convention/*.md`)를 직접 복제하지 않고, 해당 규칙을 **점검·검증·기록**하는 enforce 레이어로 동작합니다.
+llm-rules Claude Code 에디션이 설치하는 **9개 슬래시 커맨드**입니다. 8개는 `/llm-rules:` 네임스페이스(`<claudeDir>/commands/llm-rules/`)를 쓰고, `/prepare-new` 는 네임스페이스 없이 `<claudeDir>/commands/` 루트에 설치됩니다. 각 커맨드는 컨벤션 prose(SSOT: `docs/convention/*.md`)를 직접 복제하지 않고, 해당 규칙을 **점검·검증·기록**하는 enforce 레이어로 동작합니다.
 
 `<claudeDir>` 은 설치 위치에 따라 global(`~/.claude/`) 또는 project(`<repo>/.claude/`) 입니다.
 
@@ -18,6 +18,7 @@ llm-rules Claude Code 에디션이 설치하는 **8개 슬래시 커맨드**입�
 | `/llm-rules:verify` | 검증 | 변경분 타입체크(+선택적 테스트) 검증 | (선택) 검증 범위 |
 | `/llm-rules:save-docs` | 기록 | 작업 결과를 `docs/`(memory·history·bug·acknowledge·utils)에 분류 저장 | (선택) 분류/제목 |
 | `/llm-rules:log-feedback` | 기록 | 사용자 피드백·결정·교정 사항을 `docs/` 에 누적 기록 | (선택) 피드백 내용 |
+| `/prepare-new` | 핸드오프 | 세션 컨텍스트를 유실 없이 보존 — docs/ 최신화·정합성 검증 + `HANDOFF.md` + 재개 프롬프트 | (선택) 추가로 강조할 컨텍스트 |
 
 > 인자는 모두 **선택**입니다. 인자를 생략하면 변경분(working tree/diff) 또는 현재 컨텍스트를 대상으로 동작합니다.
 
@@ -86,6 +87,17 @@ llm-rules Claude Code 에디션이 설치하는 **8개 슬래시 커맨드**입�
 - **목적**: 세션에서 사용자가 내린 교정·선호·결정을 `docs/`(주로 `acknowledge`/`memory`)에 누적 기록합니다. 같은 지적이 재발하지 않도록 결정과 그 이유를 남깁니다.
 - **사용법**: `/llm-rules:log-feedback`
 - **인자**: (선택) 기록할 피드백 내용. 생략 시 직전 대화에서 받은 피드백을 정리.
+
+---
+
+## 세션 핸드오프 커맨드
+
+### `/prepare-new`
+- **목적**: 현재 세션을 종료하고 새 세션에서 유실 없이 이어가기 위한 준비를 수행합니다. Phase 0(대화 전수 인벤토리 — 요약 아닌 목록화) → Phase 1(코드↔문서 정합성 대조) → Phase 2(`docs/` 최신화·고도화, `ARCHITECTURE.md`·`docs/acknowledge` 보장 — ai-process §9 분류 준수) → Phase 3(`docs/HANDOFF.md` 세션 스냅샷) → Phase 4(유실 자체 검증) → Phase 5(새 세션 복사-붙여넣기용 재개 프롬프트 출력) 순서로 진행합니다.
+- **사용법**: `/prepare-new`
+- **인자**: (선택) 추가로 강조할 컨텍스트.
+- **특징**: 유일하게 네임스페이스 없이 설치됩니다(`<claudeDir>/commands/prepare-new.md`). `disable-model-invocation: true` 라 모델이 임의 호출하지 못하고 사용자가 명시적으로만 실행합니다. 문서와 재개 프롬프트만 산출하며 애플리케이션 코드는 수정하지 않습니다.
+- **연계**: `session-context.sh` 훅의 `docs/PROCESS.md` 주입, `/llm-rules:save-docs` 의 분류 저장과 보완 관계입니다 — save-docs 가 작업 단위 기록이라면 prepare-new 는 세션 전체의 스냅샷·인수인계입니다.
 
 ---
 

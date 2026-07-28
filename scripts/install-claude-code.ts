@@ -104,7 +104,7 @@ else if (flagged.length) items = flagged
 else {
     log('설치 항목 (쉼표로 다중 선택, a=전체):')
     log('  1) settings.json (hooks + permissions 병합)')
-    log('  2) hooks 스크립트 (6종)')
+    log('  2) hooks 스크립트 (7종)')
     log('  3) slash commands (/llm-rules:*)')
     log('  4) subagents (리뷰어)')
     log('  5) output-style (한국어·존댓말)')
@@ -112,15 +112,25 @@ else {
     if (/^a/i.test(sel)) items = [...ALL_ITEMS]
     else {
         const map: Record<string, Item> = { '1': 'settings', '2': 'hooks', '3': 'commands', '4': 'agents', '5': 'output-style' }
-        items = [...new Set(sel.split(',').map((s) => map[s.trim()]).filter(Boolean) as Item[])]
+        items = [
+            ...new Set(
+                sel
+                    .split(',')
+                    .map((s) => map[s.trim()])
+                    .filter(Boolean) as Item[],
+            ),
+        ]
     }
 }
 if (!items.length) die('선택된 항목이 없습니다.')
 // settings 는 hooks 경로를 참조하므로 hooks 도 함께 깐다(없으면 경고).
-if (items.includes('settings') && !items.includes('hooks')) warn('settings 만 선택했습니다. hooks 스크립트가 없으면 hook 이 동작하지 않습니다. (--hooks 권장)')
+if (items.includes('settings') && !items.includes('hooks'))
+    warn('settings 만 선택했습니다. hooks 스크립트가 없으면 hook 이 동작하지 않습니다. (--hooks 권장)')
 
 const HOOKS_DEST = join(loc.claudeDir, 'hooks', 'llm-rules')
 const COMMANDS_DEST = join(loc.claudeDir, 'commands', 'llm-rules')
+const ROOT_COMMANDS = ['prepare-new.md']
+const ROOT_COMMANDS_DEST = join(loc.claudeDir, 'commands')
 const AGENTS_DEST = join(loc.claudeDir, 'agents')
 const OUTPUT_DEST = join(loc.claudeDir, 'output-styles')
 const SETTINGS_PATH = join(loc.claudeDir, 'settings.json')
@@ -183,8 +193,8 @@ const mergeSettings = async () => {
     log(`✅ settings.json 병합: ${SETTINGS_PATH}`)
 }
 
-const copyTree = async (src: string, dest: string, label: string, exec = false) => {
-    const files = (await readdir(src)).filter((f) => !f.startsWith('.'))
+const copyTree = async (src: string, dest: string, label: string, exec = false, skip: string[] = []) => {
+    const files = (await readdir(src)).filter((f) => !f.startsWith('.') && !skip.includes(f))
     if (opts.dryRun) {
         log(`\n(dry-run) ${label}: ${files.length}개 → ${dest}`)
         files.forEach((f) => log(`  • ${f}`))
@@ -201,7 +211,15 @@ const copyTree = async (src: string, dest: string, label: string, exec = false) 
 
 // --- 실행 ---
 if (items.includes('hooks')) await copyTree(join(ASSETS, 'hooks'), HOOKS_DEST, 'hooks 스크립트', true)
-if (items.includes('commands')) await copyTree(join(ASSETS, 'commands'), COMMANDS_DEST, 'slash commands')
+if (items.includes('commands')) {
+    await copyTree(join(ASSETS, 'commands'), COMMANDS_DEST, 'slash commands', false, ROOT_COMMANDS)
+    if (opts.dryRun) ROOT_COMMANDS.forEach((f) => log(`(dry-run) slash command(root) → ${join(ROOT_COMMANDS_DEST, f)}`))
+    else {
+        await mkdir(ROOT_COMMANDS_DEST, { recursive: true })
+        for (const f of ROOT_COMMANDS) await copyFile(join(ASSETS, 'commands', f), join(ROOT_COMMANDS_DEST, f))
+        log(`✅ slash commands(root): ${ROOT_COMMANDS.length}개 → ${ROOT_COMMANDS_DEST}`)
+    }
+}
 if (items.includes('agents')) await copyTree(join(ASSETS, 'agents'), AGENTS_DEST, 'subagents')
 if (items.includes('output-style')) {
     if (opts.dryRun) log(`\n(dry-run) output-style → ${OUTPUT_DEST}/llm-rules.md`)
@@ -218,7 +236,7 @@ if (opts.dryRun) log('dry-run 완료. 실제 설치하려면 --dry-run 을 빼�
 else {
     log('✓ Claude Code 설치 완료.')
     log(`  - 적용 확인: ${loc.kind === 'global' ? '새 세션' : '이 프로젝트에서 새 세션'} 시작 후 /hooks 로 확인`)
-    if (items.includes('commands')) log('  - 슬래시 커맨드: /llm-rules:audit-conventions 등')
+    if (items.includes('commands')) log('  - 슬래시 커맨드: /llm-rules:audit-conventions · /prepare-new 등')
     if (items.includes('agents')) log('  - 서브에이전트: convention-reviewer 등 (자동/수동 호출)')
     if (items.includes('output-style')) log('  - 응답 스타일: /output-style llm-rules')
     if (loc.kind === 'global') warn('글로벌 hook 은 모든 프로젝트에 적용됩니다. 특정 레포만 원하면 --project 로 설치하세요.')

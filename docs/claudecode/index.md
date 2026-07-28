@@ -44,11 +44,12 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 | hook | 이벤트 | 동작 |
 |---|---|---|
-| `guard-commit.sh` | PreToolUse(Bash, `git commit*`) | `exit 2` 로 차단 — Conventional Commits 헤더 위반 / `Co-Authored-By`·Claude 트레일러 / `main`·`master` 직접 커밋 / 스테이지의 `.env`·secrets·`dist`·`node_modules`·키 파일. 파싱 실패는 fail-open |
+| `guard-commit.sh` | PreToolUse(Bash, `git commit*`) | `exit 2` 로 차단 — Conventional Commits 헤더 위반 / `Co-Authored-By`·Claude 트레일러 / `main`·`master` 직접 커밋 / 스테이지의 `.env`·secrets·`dist`·`node_modules`·키 파일. 파싱 실패는 fail-open. `llm-rules.auto-commit` 합의 레포는 전 검사 통과 시 권한 프롬프트 자동 승인 |
+| `guard-push.sh` | PreToolUse(Bash, `git push*`) | force push(`--force`/`-f`, 플래그 위치 무관) `exit 2` 차단. `llm-rules.auto-push` 합의 레포는 비-force 푸시 권한 프롬프트 자동 승인(`--force-with-lease` 는 항상 확인) |
 | `scan-secrets.sh` | PreToolUse(Edit·Write·MultiEdit) | 새로 쓰는 내용에 고신뢰 시크릿(`AKIA…`, `gh[pousr]_…`, `sk-…`, PRIVATE KEY, `xox…`) 이 있으면 `exit 2` 차단. `.md`/`.mdx`/`.txt` 는 예시 오탐 방지로 건너뜀 |
 | `lint-edit.sh` | PostToolUse(Edit·Write·MultiEdit) | TS/JS 만 대상(아니면 no-op). `prettier --write` 후 검사. **HARD**(`{"decision":"block"}`): `useCallback`/`useMemo`, backend 경로의 `throw new Error`·`process.env` 직접접근. **SOFT**(systemMessage 경고): `function` 키워드, 코드 주석, page/layout 외 `export default`, HACK/FIXME/`@ts-ignore`, sanitize 없는 `dangerouslySetInnerHTML` |
 | `verify-on-stop.sh` | Stop | 변경된 TS/JS 가 있을 때만 `tsc --noEmit`(없으면 no-op). 실패 시 `{"decision":"block"}` 으로 계속 작업 유도. 테스트는 `LLM_RULES_STOP_TEST=1` 일 때만. `stop_hook_active` 가드로 무한루프 방지 |
-| `session-context.sh` | SessionStart(startup·resume) | 컨벤션 핵심 요약 + (있으면) `docs/PROCESS.md` 앞부분을 `additionalContext` 로 주입. `docs/` 디렉토리 보장 |
+| `session-context.sh` | SessionStart(startup·resume·clear·compact) | 컨벤션 핵심 요약 + 작업 개시 프로토콜 + (있으면) `docs/PROCESS.md` 앞부분을 `additionalContext` 로 주입. `docs/` 디렉토리 보장 |
 | `reinject-rules.sh` | UserPromptSubmit | 매 프롬프트마다 "절대 금지" 안티패턴 1줄을 `additionalContext` 로 재주입(드리프트 방지) |
 
 ### Settings — `permissions`
@@ -60,6 +61,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 ### Slash Commands — `/llm-rules:<name>`, `<claudeDir>/commands/llm-rules/`
 
 `audit-conventions` · `audit-fsd` · `audit-backend-domain` · `audit-query` · `process` · `verify` · `save-docs` · `log-feedback`
+
+네임스페이스 없는 `/prepare-new`(세션 핸드오프 — docs/ 최신화 + `HANDOFF.md` + 재개 프롬프트)는 `<claudeDir>/commands/prepare-new.md` 에 설치됩니다.
 
 ### Subagents — `<claudeDir>/agents/`
 
@@ -78,7 +81,7 @@ CC 에디션은 **enforce 레이어일 뿐**, 규칙의 내용·근거·예시�
 ### CC 에디션 세부
 
 - [enforcement.md](./enforcement.md) — 각 컨벤션 .md 의 규칙 → 메커니즘 매핑 + 강제 모델(HARD/SOFT, exit code, fail-open)
-- [hooks.md](./hooks.md) — 6개 hook 의 입력·판정·출력 상세
+- [hooks.md](./hooks.md) — 7개 hook 의 입력·판정·출력 상세
 - [commands.md](./commands.md) — slash command 사용법
 - [agents.md](./agents.md) — subagent 역할과 트리거
 - [settings.md](./settings.md) — `permissions`·hook 연결(`settings.json`) 상세

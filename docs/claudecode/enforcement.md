@@ -11,7 +11,8 @@
 
 | 표기 | 메커니즘 | 동작 |
 |------|----------|------|
-| `hook:guard-commit` | PreToolUse(Bash, `git commit*`) | `exit 2` 로 커밋 **차단** |
+| `hook:guard-commit` | PreToolUse(Bash, `git commit*`) | `exit 2` 로 커밋 **차단**. auto-commit 합의 레포는 전 검사 통과 시 권한 프롬프트 자동 승인 |
+| `hook:guard-push` | PreToolUse(Bash, `git push*`) | force push(플래그 위치 무관) `exit 2` **차단**. auto-push 합의 레포는 비-force 푸시 권한 프롬프트 자동 승인 |
 | `hook:scan-secrets` | PreToolUse(Edit\|Write\|MultiEdit) | 시크릿 패턴이면 `exit 2` 로 편집 **차단** |
 | `hook:lint-edit (HARD)` | PostToolUse(Edit\|Write\|MultiEdit) | `{"decision":"block"}` 로 LLM 에 **수정 요구** |
 | `hook:lint-edit (SOFT)` | PostToolUse(Edit\|Write\|MultiEdit) | `{"systemMessage":...}` 로 **경고만**(차단 안 함) |
@@ -55,8 +56,8 @@
 | §6.1 실제 파일 > 메모리·문서 우선 | `prose` | prose 유지 |
 | §6.8 dead code — 내 변경분 미사용 코드 제거·주석 보관 금지 | `agent:convention-reviewer` | prose 유지 |
 | §1·§14 모든 작업은 `docs/` 기반, `docs/` 보장 | `hook:session-context`(`mkdir -p docs`), `cmd:save-docs` | 결정론 졸업(디렉토리 보장) / 나머지 prose |
-| §2 `docs/PROCESS.md` 체크리스트 운용 | `cmd:process`, `hook:session-context`(PROCESS.md 앞부분 주입) | 경고만(주입은 결정론, 작성은 사람/LLM) |
-| §3 멈춤 — 의사결정 필요 시 확인 | `prose` + `hook:reinject-rules`("모호하면 1줄 객관식 질문") | prose 유지(주입으로 보강) |
+| §2 `docs/PROCESS.md` 체크리스트 운용 | `cmd:process`, `hook:session-context`(PROCESS.md 앞부분 주입), `hook:reinject-rules`("스텝마다 docs/PROCESS.md 체크 갱신") | 경고만(주입은 결정론, 작성은 사람/LLM) |
+| §3 멈춤 — 의사결정 필요 시 확인 | `prose` + `hook:reinject-rules`("모호하면 1줄 객관식 질문"), `hook:session-context`(작업 개시 프로토콜 1) | prose 유지(주입으로 보강) |
 | §3.1 한 번에 모든 경우의 수를 묻기 | `prose` | prose 유지 |
 | §6.1 코드베이스 먼저 파악 | `prose` | prose 유지 |
 | §6.2 hack/우회 금지 — 근본 해결 (`HACK`/`FIXME`/`@ts-ignore`/`eslint-disable` 금지, `@ts-expect-error` 만 조건부) | `hook:lint-edit (SOFT)` + prose(§6.2 명문화) | 경고만(주석/우회 마커는 오탐 가능) |
@@ -65,10 +66,10 @@
 | §6.6 의존성 최신·충돌 시 확인 | `permission`(`npm install`/`pnpm add`/`yarn add` → `ask`) | 결정론 졸업(설치는 확인질문) |
 | §6.7 프로젝트 환경 안에서 해결(예: Drizzle 있으면 raw SQL 금지) | `agent:backend-convention-reviewer` | prose 유지(에이전트 점검) |
 | §6.8 최소 변경(minimal diff) | `prose` | prose 유지 |
-| §7 신규 프로젝트 스택·환경 먼저 합의 | `prose` | prose 유지 |
+| §7 신규 프로젝트 스택·환경 먼저 합의 | `prose` + `hook:session-context`(작업 개시 프로토콜 2 — 스택 장단점 요약 합의) | prose 유지(주입으로 보강) |
 | §8·§8.1 검증 후 다음 스텝(최소 기계 검증 사다리 — 전제: 프로젝트가 `typecheck`·`test` 스크립트 제공, lint 는 설정된 경우만) | `hook:verify-on-stop`(`tsc --noEmit`, 옵션 테스트), `cmd:verify` — 타 에이전트는 §8.1 prose 로 직접 수행 | 결정론 졸업(타입체크 실패 시 block) |
 | §1.1 세션 시작 시퀀스(PROCESS.md 먼저 읽기) | `hook:session-context` — 타 에이전트는 §1.1 prose 로 직접 수행 | 결정론 졸업(주입은 기계적) |
-| §9 결과물 분류 저장(memory/history/bug/acknowledge/feedback/QA) | `cmd:save-docs`, `cmd:log-feedback` | prose 유지(기록은 사람 명령) |
+| §9 결과물 분류 저장(memory/history/bug/acknowledge/feedback/QA) | `cmd:save-docs`, `cmd:log-feedback`, `hook:reinject-rules`("작업 끝나면 docs/ 분류 저장") | prose 유지(기록은 사람 명령) |
 | §10 안티패턴(절대 금지) 상시 인지 | `hook:reinject-rules` | 결정론 졸업(주입은 기계적) |
 
 ---
@@ -135,11 +136,11 @@
 | §1.1 언어·스타일 히스토리 우선(git log 확인, 섞이면 질문 + `docs/acknowledge` 기록 후 적용) | `prose` | prose 유지(언어 판단은 LLM) |
 | §3 BREAKING CHANGE(`!` 표기) | `hook:guard-commit`(헤더 정규식이 `!?` 허용) | 결정론 졸업(허용 통과) |
 | §5 브랜치 네이밍(`<type>/<요약>`) | `prose` | prose 유지 |
-| §6 사용자 요청 전 커밋·푸시 금지 | `permission`(`git commit`/`git push`/`merge`/`rebase` → `ask`) | 결정론 졸업(확인질문) |
+| §6 사용자 요청 전 커밋·푸시 금지(자동 커밋/푸시 합의 레포 예외) | `permission`(`git commit`/`git push`/`merge`/`rebase` → `ask`), `hook:guard-commit`/`hook:guard-push`(`git config llm-rules.auto-commit`/`auto-push` 합의 레포는 검사 통과 시 자동 승인), `hook:session-context`(작업 개시 프로토콜 5 — 미설정 레포 첫 확인 때 자동/수동 확정·acknowledge 기록) | 결정론 졸업(확인질문/합의 승인) |
 | §6 `main`/`master` 직접 커밋 금지 | `hook:guard-commit`(현재 브랜치 main/master 면 `exit 2` — 합의된 레포는 `git config llm-rules.allow-main true` 또는 `LLM_RULES_ALLOW_MAIN=1` 로 이 검사만 생략) | 결정론 졸업 |
 | §6 시크릿·빌드 산출물 커밋 금지(`dist/`/`node_modules/`/`.env`/`.pem`/`id_rsa`) | `hook:guard-commit`(스테이지 검사 차단), `permission`(`git add .env` deny) | 결정론 졸업 |
 | §6.1 `Co-Authored-By`/Claude 트레일러·`Claude-Session:` 세션 링크 금지(author 사용자 단독) | `hook:guard-commit`(`co-authored-by\|generated with\|🤖\|claude<\|noreply@anthropic\|claude-session *:` 시 `exit 2` — 콜론 필수 매칭이라 prose 언급은 오탐 안 함) | 결정론 졸업 |
-| §6 `git push --force`/`-f` 금지 | `permission`(`git push --force`/`-f` → `deny`) | 결정론 졸업 |
+| §6 `git push --force`/`-f` 금지 | `permission`(`git push --force`/`-f` → `deny` — 접두 매칭), `hook:guard-push`(플래그 후치 변형까지 `exit 2`, `--force-with-lease` 는 차단 없이 확인 유지) | 결정론 졸업 |
 | §6 선별 스테이징(`git add -A`/`.` 금지)·커밋 전 status/diff 확인 | `prose` | prose 유지 |
 | §6 논리 단위 1커밋 | `prose` | prose 유지 |
 
@@ -232,7 +233,8 @@
 
 ### 결정론으로 졸업한 규칙 (hook/permission 이 기계적으로 강제)
 
-- **커밋 전부**(git.md §1·§2·§3·§6 + Co-Author 금지 + main 직접커밋 + 스테이지 시크릿) → `hook:guard-commit` + `permission`.
+- **커밋 전부**(git.md §1·§2·§3·§6 + Co-Author 금지 + main 직접커밋 + 스테이지 시크릿) → `hook:guard-commit` + `permission`. 자동 커밋/푸시 합의 레포(`llm-rules.auto-commit`/`auto-push`)는 검사 통과 시 ask 자동 승인.
+- **force push**(git.md §6 — 플래그 후치 변형 포함) → `hook:guard-push` + `permission`(deny 는 접두 매칭 보조).
 - **시크릿 하드코딩**(security §1) → `hook:scan-secrets`(편집 차단).
 - **백엔드 `throw new Error`·`process.env` 직접접근**(backend §6.1·§14) → `hook:lint-edit (HARD)`.
 - **`useCallback`/`useMemo`**(frontend §4) → `hook:lint-edit (HARD)`.

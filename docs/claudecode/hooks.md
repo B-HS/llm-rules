@@ -1,13 +1,13 @@
 # Hooks — llm-rules Claude Code 에디션
 
-> 컨벤션 prose(SSOT)는 이 레포의 `docs/convention/*.md` 에 있습니다. CC 에디션은 그 prose 를 복제하지 않고, 아래 6개 hook 으로 **enforce 레이어**만 더합니다.
+> 컨벤션 prose(SSOT)는 이 레포의 `docs/convention/*.md` 에 있습니다. CC 에디션은 그 prose 를 복제하지 않고, 아래 7개 hook 으로 **enforce 레이어**만 더합니다.
 > 설치 위치: `<claudeDir>/hooks/llm-rules/`. `settings.json` 의 `hooks` 가 각 이벤트에 연결합니다.
 
 ---
 
 ## 전제 — jq 의존성
 
-**6개 hook 모두 `jq` 에 의존합니다.** 각 스크립트는 첫 줄에서 `command -v jq >/dev/null 2>&1 || exit 0` 으로 `jq` 가 없으면 **즉시 통과(no-op, exit 0)** 합니다. `jq` 는 hook 입력(JSON, stdin)을 파싱하고 출력 JSON(`{"decision":...}` / `additionalContext` 등)을 만드는 데 쓰입니다. 따라서 **`jq` 가 설치돼 있지 않으면 모든 enforce 가 조용히 비활성화**됩니다. 설치를 권장합니다(`brew install jq` 등).
+**7개 hook 모두 `jq` 에 의존합니다.** 각 스크립트는 첫 줄에서 `command -v jq >/dev/null 2>&1 || exit 0` 으로 `jq` 가 없으면 **즉시 통과(no-op, exit 0)** 합니다. `jq` 는 hook 입력(JSON, stdin)을 파싱하고 출력 JSON(`{"decision":...}` / `additionalContext` 등)을 만드는 데 쓰입니다. 따라서 **`jq` 가 설치돼 있지 않으면 모든 enforce 가 조용히 비활성화**됩니다. 설치를 권장합니다(`brew install jq` 등).
 
 공통 동작:
 
@@ -34,6 +34,8 @@
 2. **Co-Authored-By / Claude 트레일러** — 커밋 명령에 `co-authored-by`, `generated with`, `🤖 generated`, `claude <` / `claude.ai <`, `noreply@anthropic`, `claude-session:`(AI 세션 링크 트레일러 — 콜론 필수 매칭이라 단순 언급은 오탐하지 않음) 패턴(대소문자 무시)이 있으면 차단. author 는 사용자 단독이어야 합니다. (git.md §6.1)
 3. **스테이지의 시크릿/빌드 산출물** — `git diff --cached --name-only` 결과에 `.env`(또는 `.env.*`), `secrets/`, `dist/`, `node_modules/`, `*.pem`, `id_rsa` 가 포함되면 차단. (git.md §6 · security.md §1)
 4. **Conventional Commits 헤더 위반** — 첫 `-m`/`--message` 값을 헤더로 보고, `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(scope)?!?: .+` 패턴에 맞지 않으면 차단. (git.md §1·§2·§3)
+
+**자동커밋(권한 프롬프트 생략)**: `git config llm-rules.auto-commit true` 인 레포에서는 **위 4가지 검사를 모두 통과한 커밋에 한해** `permissionDecision: "allow"` 를 출력해 하네스 권한 프롬프트(ask)를 생략합니다. 미설정 레포는 기존대로 ask 로 확인합니다. (git.md §6 예외 — 합의는 `docs/acknowledge` 에 기록)
 
 **커버 규칙**: git.md §1·§2·§3·§6, security.md §1, 개인 절대규칙(Co-Authored-By 금지).
 
@@ -141,18 +143,19 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 
 | 항목 | 값 |
 |------|----|
-| 이벤트 | `SessionStart` (matcher `startup\|resume`, timeout 15s) |
-| 동작 | 컨벤션 핵심 요약 + (있으면) `docs/PROCESS.md` 앞부분을 **`additionalContext` 로 주입**(`exit 0`) |
+| 이벤트 | `SessionStart` (matcher `startup\|resume\|clear\|compact`, timeout 15s) |
+| 동작 | 컨벤션 핵심 요약 + 작업 개시 프로토콜 + (있으면) `docs/PROCESS.md` 앞부분을 **`additionalContext` 로 주입**(`exit 0`) |
 
-세션 시작/재개 시:
+세션 시작/재개/클리어/컴팩션 시:
 
 1. **`docs/` 디렉토리를 보장**(`mkdir -p docs`) — comments.md §3 / ai-process.md §1.
 2. **컨벤션 문서 위치를 자동 감지**해 `세부:` 라인에 반영합니다. 우선순위: `LLM_RULES_CONVENTION_DIR` 환경변수 → 프로젝트 `$CLAUDE_PROJECT_DIR/.claude/convention` (미설정 시 cwd 기준) → 글로벌 `~/.claude/convention`. 각 후보는 `index.md` 존재 여부로 검증하며, 어디에도 없으면 경로 대신 **미설치 안내**를 주입합니다.
 3. 컨벤션 핵심 요약을 컨텍스트로 만듭니다. **요약 문구의 단일 출처는 스크립트(`session-context.sh`)의 주입 텍스트**이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다. (주제: 함수·타입·주석·매직넘버/이모지·export·FSD/쿼리·커밋·시크릿·검증·질문 방식)
-4. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
-5. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
+4. **작업 개시 프로토콜 5칙**(사소한 애매함도 한 번에 모아 객관식 사전 질문, 없으면 바로 진행 · 신규 도입 시 스택 장단점 요약 합의 · 확정 내용 `docs/acknowledge`·`PROCESS.md` 기록 · 전긍정 금지, 문제 시 근거+대안 제시 · 커밋/푸시 진행 방식 세션 시작 합의(기본=매번 확인))을 덧붙입니다. 원문의 단일 출처는 스크립트입니다.
+5. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
+6. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
 
-**커버 규칙**: ai-process.md §1·§14(`docs/PROCESS.md` 기반 작업, 세션 간 연속성).
+**커버 규칙**: ai-process.md §1·§14(`docs/PROCESS.md` 기반 작업, 세션 간 연속성) + §3(멈춤)·§4(모호한 지시 구체화)·§7(신규 스택 합의) 보강.
 
 ---
 
@@ -169,15 +172,32 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 
 ---
 
+## 7. guard-push.sh
+
+| 항목 | 값 |
+|------|----|
+| 이벤트 | `PreToolUse` (matcher `Bash`, `if "Bash(git push*)"`, timeout 20s) |
+| 동작 | force push 는 **`exit 2` 로 차단**. `llm-rules.auto-push` 합의 레포의 비-force 푸시는 권한 프롬프트 자동 승인. 파싱 실패는 fail-open |
+
+`git push` 실행 직전에 검사합니다:
+
+1. **force push 차단** — `--force` / `-f` 가 명령의 **어느 위치에 있든** 차단합니다. permission `deny`(`git push --force:*`)는 접두 매칭이라 `git push origin main --force` 같은 후치 변형을 못 잡는데, 이 훅이 그 구멍을 메웁니다. `--force-with-lease` 는 차단하지 않되(git.md §6 — 사용자 승인 전제) **자동 승인 대상에서도 제외**해 항상 확인을 받습니다.
+2. **자동푸시(권한 프롬프트 생략)** — `git config llm-rules.auto-push true` 인 레포에서 force 계열이 아닌 푸시는 `permissionDecision: "allow"` 를 출력해 ask 를 생략합니다. 미설정 레포는 기존대로 확인합니다.
+
+**커버 규칙**: git.md §6 (force push 금지, 자동 커밋/푸시 합의 예외).
+
+---
+
 ## 요약 표
 
 | hook | 이벤트 | enforce/경고 | 차단 방식 | 핵심 커버 |
 |------|--------|--------------|-----------|-----------|
-| guard-commit.sh | PreToolUse(Bash, git commit) | 강제(차단) | `exit 2`, fail-open | git.md §1·§2·§3·§6, 트레일러 금지 |
+| guard-commit.sh | PreToolUse(Bash, git commit) | 강제(차단)+합의 승인 | `exit 2`, fail-open | git.md §1·§2·§3·§6, 트레일러 금지, auto-commit |
+| guard-push.sh | PreToolUse(Bash, git push) | 강제(차단)+합의 승인 | `exit 2`, fail-open | git.md §6 force 금지, auto-push |
 | scan-secrets.sh | PreToolUse(Edit/Write/MultiEdit) | 강제(차단) | `exit 2` | security.md §1 |
 | lint-edit.sh | PostToolUse(Edit/Write/MultiEdit) | HARD 차단 + SOFT 경고 | `{"decision":"block"}` / `{"systemMessage"}` | common·comments·frontend §4·backend §6.1·§14·security §4 |
 | verify-on-stop.sh | Stop | 강제(작업 유도) | `{"decision":"block"}` | ai-process.md §8 |
-| session-context.sh | SessionStart(startup/resume) | 주입 | `additionalContext` | ai-process.md §1·§14 |
+| session-context.sh | SessionStart(startup/resume/clear/compact) | 주입 | `additionalContext` | ai-process.md §1·§14 |
 | reinject-rules.sh | UserPromptSubmit | 주입 | `additionalContext` | 드리프트 방지(전반) |
 
 > 전체 hook 은 `jq` 가 없으면 비활성화됩니다. `settings.json` 의 `permissions`(allow: bun/bunx/tsc/bun test/git status·diff·log·add / ask: git commit·push·merge·rebase·패키지 add / deny: `.env` Read·Write·Edit·`secrets/**`·`rm -rf`·`git push --force`)와 함께 동작해 권한·커밋·시크릿·타입안정성을 다층으로 방어합니다.
