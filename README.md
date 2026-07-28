@@ -63,8 +63,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 설치 항목:
 
 - **settings.json** — `permissions`(allow/ask/deny) + `hooks` 를 기존 설정에 **비파괴 병합**(`.bak`, 멱등)
-- **hooks (6)** — 커밋 가드(Conventional Commits·Co-Authored-By 차단·main 차단·시크릿 차단), 편집 lint(prettier·금지패턴), 시크릿 스캔, Stop 검증(tsc), 세션 컨텍스트 주입, 규칙 재주입
-- **commands** — `/llm-rules:audit-conventions` · `audit-fsd` · `audit-backend-domain` · `audit-query` · `verify` · `process` · `save-docs` · `log-feedback`
+- **hooks (7)** — 커밋 가드(Conventional Commits·Co-Authored-By 차단·main 차단·시크릿 차단, `llm-rules.auto-commit` 합의 레포는 검사 통과 시 권한 자동승인), 푸시 가드(force push 차단·`llm-rules.auto-push` 자동승인), 편집 lint(prettier·금지패턴), 시크릿 스캔, Stop 검증(tsc), 세션 컨텍스트 주입(작업 개시 프로토콜 포함), 규칙 재주입
+- **commands** — `/llm-rules:audit-conventions` · `audit-fsd` · `audit-backend-domain` · `audit-query` · `verify` · `process` · `save-docs` · `log-feedback` · `/prepare-new`(세션 핸드오프, 네임스페이스 없이 설치)
 - **agents** — `convention-reviewer` · `fsd-dependency-reviewer` · `type-utility-reviewer` · `backend-convention-reviewer` · `security-reviewer` · `tanstack-query-reviewer` · `desktop-security-reviewer`
 - **output-style** — `llm-rules` (한국어·존댓말·간결)
 
