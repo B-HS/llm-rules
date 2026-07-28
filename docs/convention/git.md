@@ -90,6 +90,7 @@ BREAKING CHANGE: /api/blog/posts 응답이 { data } 로 감싸진다
 ## 6. 커밋 · 푸시 안전 규칙
 
 - **사용자가 요청하기 전에는 커밋·푸시하지 않는다.** (AI 작업 시 — [ai-process.md](./ai-process.md) §3 멈춤)
+    - **예외 — 자동 커밋/푸시 합의(optional)**: 커밋이 예상되는 세션에서 레포에 설정이 없으면 첫 확인 질문 묶음에 자동/수동을 포함해 정하고, **`git config llm-rules.auto-commit true` / `llm-rules.auto-push true`** 로 레포 단위 기록한다(합의는 `docs/acknowledge` 에도 남긴다). 설정된 레포에서는 요청 없이 논리 단위 커밋(·푸시)을 진행하며, Claude Code 에서는 guard 훅이 **전 검사(형식·트레일러·시크릿·보호 브랜치·force) 통과 시에만** 권한 프롬프트를 자동 승인한다. 미설정이면 기본(요청 시에만)으로 동작하고, 위임하더라도 이 문서의 나머지 규칙은 그대로 지킨다.
 - 커밋은 **논리적 단위 1개**로 묶는다. 무관한 변경을 한 커밋에 섞지 않는다. (→ [ai-process.md](./ai-process.md) §6.8 최소 변경)
 - `main` 에 직접 커밋하지 않고 브랜치에서 작업한 뒤 합친다 (특별한 합의가 없는 한).
 - 시크릿·빌드 산출물(`dist/`·`node_modules/`)·키 파일(`.env`·`.pem`·`id_rsa`)을 커밋하지 않는다. (→ [security.md](./security.md))

@@ -273,7 +273,7 @@
 - **`useCallback` · `useMemo` 수동 메모이제이션.** ([frontend.md](./frontend.md) §4)
 - **FSD 역방향 import / 임의 전역 상태 라이브러리 도입** (zustand 는 frontend.md §6 의 실수요 조건에서만, 서버 상태의 store 반입 금지). ([fsd.md](./fsd.md) §2 · [frontend.md](./frontend.md) §6)
 - **시크릿 하드코딩·커밋·로그 노출 / 미검증 입력 사용 / `.env` 읽기·쓰기.** ([security.md](./security.md))
-- **사용자 요청 전 커밋·푸시 / AI 트레일러(Co-Authored-By 등) / `git add -A` / force push.** ([git.md](./git.md) §6)
+- **사용자 요청 전 커밋·푸시(자동 커밋/푸시 합의 레포는 예외) / AI 트레일러(Co-Authored-By 등) / `git add -A` / force push.** ([git.md](./git.md) §6)
 - **검증 없이 "통과했다" 보고.** (§8.1)
 - **확인 사항을 하나씩 끊어 묻기** — 한 번에 모아서. (§3.1)
 - **컨텍스트가 길다는 이유로 규칙 완화.** (§5)
@@ -299,7 +299,7 @@
 - [ ] 의존성을 늘리기 전에 기존/표준으로 되는지 확인했는가 (§6.6)
 - [ ] hack(HACK·TRICK·우회) 없이 근본 원인을 해결하는가
 - [ ] 버그는 재현(가능하면 실패 테스트) 후 고쳤는가 (§8)
-- [ ] 커밋은 Conventional Commits 를 따르고, 요청 전 커밋·푸시하지 않았는가 ([git.md](./git.md))
+- [ ] 커밋은 Conventional Commits 를 따르고, 요청(또는 자동 커밋/푸시 합의) 전 커밋·푸시하지 않았는가 ([git.md](./git.md))
 - [ ] 시크릿 비노출·입력 검증 등 보안 기본을 지켰는가 ([security.md](./security.md))
 - [ ] 코드가 짧고 간결하며, 네이밍이 정확한가
 - [ ] 각 스텝을 검증(테스트 등)하고 넘어가는가

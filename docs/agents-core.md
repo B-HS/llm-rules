@@ -43,7 +43,7 @@
 - **요청 범위 밖 수정** — 무관한 리팩토링·리네임·재포맷 금지 (minimal diff).
 - **임의 의존성 추가** — 기존/표준으로 되는지 먼저 확인.
 - **시크릿 하드코딩 / `.env` 읽기·쓰기 / 미검증 입력 사용.**
-- **사용자 요청 전 commit·push / AI 트레일러(`Co-Authored-By` 등) / `git add -A` / force push.**
+- **사용자 요청 전 commit·push(자동 커밋/푸시 합의 레포는 예외 — git §6) / AI 트레일러(`Co-Authored-By` 등) / `git add -A` / force push.**
 - **검증 없이 "통과했다" 보고.**
 - **확인 사항을 하나씩 끊어 묻기** — 한 번에 모아 질문.
 - **컨텍스트가 길다는 이유로 규칙 완화.**
@@ -108,7 +108,7 @@
 - **Conventional Commits v1.0.0**: `type(scope): 설명` — type 영어(feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert), 마침표 없이 50자 이내. BREAKING CHANGE 는 `!` 또는 대문자 footer. 기본 언어는 한국어 명사형(`~추가`).
 - **언어·스타일은 히스토리 우선**: 별도 지시가 없으면 커밋 전에 `git log --oneline -30` 으로 과거 커밋을 읽고 그 언어·형식에 맞춘다. 히스토리가 없으면 기본값(한국어). **섞여 있으면 사용자에게 묻고**, 결정을 `docs/acknowledge` 에 기록해 이후 커밋·푸시에 계속 적용한다.
 - 브랜치 `<type>/<요약>` kebab-case. `main` 직접 커밋 금지.
-- **요청 전 커밋·푸시 금지.** 논리 단위 1커밋. **선별 스테이징**(`git add -A`/`.` 금지), 커밋 전 `git status`/`git diff` 확인. **force push 금지**(승인 시에도 `--force-with-lease` 만).
+- **요청 전 커밋·푸시 금지.** 예외: 자동 커밋/푸시를 합의한 레포(`git config llm-rules.auto-commit true` / `llm-rules.auto-push true` — 미설정 레포면 첫 확인 때 자동/수동을 물어 기록하고 `docs/acknowledge` 에도 남긴다). 자동이어도 형식·트레일러·시크릿·보호 브랜치 규칙은 그대로 적용된다. 논리 단위 1커밋. **선별 스테이징**(`git add -A`/`.` 금지), 커밋 전 `git status`/`git diff` 확인. **force push 금지**(승인 시에도 `--force-with-lease` 만).
 - 커밋을 여러 개로 나눌 때는 **한 커밋분만 스테이징 → 완료 확인 → 다음** 순서로 진행한다.
 - **author 는 사용자 단독** — `Co-Authored-By`·`Generated with`·`Claude-Session:` 등 세션 링크·🤖 등 AI 서명·트레일러 금지.
 
