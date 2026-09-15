@@ -1,7 +1,24 @@
 # PROCESS — 현재 세션 작업 상태
 
-> **베이스 룰**: `CLAUDE.md` → `@docs/convention/` (ai-process.md · common.md · comments.md · frontend.md · fsd.md · backend.md · desktop.md)
+> **베이스 룰**: `AGENTS.md` → `docs/convention/` (ai-process.md · common.md · comments.md · frontend.md · fsd.md · backend.md · desktop.md)
 > 이 파일은 [ai-process.md](./convention/ai-process.md) 규칙 #2·#14 에 따라 작업 상태를 기록한다.
+
+---
+
+## 작업: Codex 본진 전환 — Claude 기능 전면 이식 + CLI 고도화 (진행 중)
+
+사용자 요청 — 현재 Claude Code 중심의 배포·강제 레이어를 Codex에서도 모두 사용할 수 있게 이식하고, Codex 전용 설치 CLI를 완성한 뒤 커밋·푸시한다.
+
+- [x] **1. 기준 조사·현황 감사** — OpenAI Docs 최신 매뉴얼로 `AGENTS.md`·Skills·Custom Agents·Hooks·Execpolicy Rules·`codex exec` 확인. 현재 Codex는 `AGENTS.md` 코어+전문만 설치되고 Claude의 hooks 7·commands 9·reviewer 7·output-style은 미이식 상태 확인
+- [x] **2. Codex 네이티브 자산 구현** — Codex 입출력 계약의 hooks 7종, Skills 9종, 읽기 전용 Custom Agents 7종, Execpolicy Rules 구성 완료
+- [x] **3. Codex CLI·원격 설치 고도화** — Bun CLI와 release 번들 기반 curl 설치기 추가. 글로벌·프로젝트·대상 경로·선택 설치·백업·멱등 병합을 지원하고 Bun CLI에는 dry-run 제공
+- [x] **4. 문서·배포 정합성 갱신** — Codex 에디션 문서와 공식 기준 링크, README, package script, 문서 사이트의 컨벤션·Codex·Claude Code 3개 섹션 반영. Claude Code 전용 자산은 변경하지 않음
+- [x] **5. 검증·로컬 적용** — hook·Skill·TOML·JSON·shell·Execpolicy·양쪽 설치기 멱등성·typecheck·GitHub Pages base build 검증 후 글로벌 Codex 설치 완료. 상세: `docs/quality-assurance/2026-09-15-codex-native-support.md`
+- [ ] **6. Git 마무리** — 변경 범위를 검토해 논리 단위로 선별 커밋하고 `origin/main`에 push
+
+기준 문서: `docs/convention/ai-process.md` · `common.md` · `comments.md` · `git.md` · `security.md` · OpenAI Docs Codex Manual(2026-09-15 갱신본).
+
+설계 결정: deprecated Custom Prompts 대신 Skills, Claude subagent Markdown 대신 Codex Custom Agent TOML, Claude settings permissions 대신 Execpolicy Rules, Claude hooks 설정 대신 Codex `hooks.json`을 사용한다. 여러 Skills를 묶는 플러그인은 Custom Agents·Rules를 포함하지 못하므로 전체 동등성 설치 단위로는 사용하지 않고 Codex 전용 CLI가 네 자산군을 함께 설치한다.
 
 ---
 

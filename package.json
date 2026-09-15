@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "sync": "bun run scripts/sync-claude-md.ts",
     "init-agents": "bun run scripts/init-agents.ts",
+    "install-codex": "bun run scripts/install-codex.ts",
     "install-claude-code": "bun run scripts/install-claude-code.ts"
   },
   "dependencies": {

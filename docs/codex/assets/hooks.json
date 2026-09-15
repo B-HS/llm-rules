@@ -1,0 +1,86 @@
+{
+  "description": "llm-rules Codex lifecycle hooks",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/guard-commit.sh\"",
+            "timeout": 20,
+            "statusMessage": "커밋 정책 확인"
+          },
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/guard-push.sh\"",
+            "timeout": 20,
+            "statusMessage": "푸시 정책 확인"
+          }
+        ]
+      },
+      {
+        "matcher": "^(apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/scan-secrets.sh\"",
+            "timeout": 15,
+            "statusMessage": "시크릿 패턴 확인"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/lint-edit.sh\"",
+            "timeout": 60,
+            "statusMessage": "변경 파일 컨벤션 확인"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/verify-on-stop.sh\"",
+            "timeout": 600,
+            "statusMessage": "변경 코드 검증"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/session-context.sh\"",
+            "timeout": 15,
+            "statusMessage": "llm-rules 컨텍스트 로드",
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"{{HOOKS_DIR}}/reinject-rules.sh\"",
+            "timeout": 10,
+            "additionalContextLimit": 1200
+          }
+        ]
+      }
+    ]
+  }
+}

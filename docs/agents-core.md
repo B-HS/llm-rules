@@ -110,7 +110,7 @@
 - 브랜치 `<type>/<요약>` kebab-case. `main` 직접 커밋 금지.
 - **요청 전 커밋·푸시 금지.** 예외: 자동 커밋/푸시를 합의한 레포(`git config llm-rules.auto-commit true` / `llm-rules.auto-push true` — 미설정 레포면 첫 확인 때 자동/수동을 물어 기록하고 `docs/acknowledge` 에도 남긴다). 자동이어도 형식·트레일러·시크릿·보호 브랜치 규칙은 그대로 적용된다. 논리 단위 1커밋. **선별 스테이징**(`git add -A`/`.` 금지), 커밋 전 `git status`/`git diff` 확인. **force push 금지**(승인 시에도 `--force-with-lease` 만).
 - 커밋을 여러 개로 나눌 때는 **한 커밋분만 스테이징 → 완료 확인 → 다음** 순서로 진행한다.
-- **author 는 사용자 단독** — `Co-Authored-By`·`Generated with`·`Claude-Session:` 등 세션 링크·🤖 등 AI 서명·트레일러 금지.
+- **author 는 사용자 단독** — `Co-Authored-By`·`Generated with`·`Codex-Session:`·`Claude-Session:` 등 세션 링크와 AI 서명·트레일러 금지.
 
 ---
 

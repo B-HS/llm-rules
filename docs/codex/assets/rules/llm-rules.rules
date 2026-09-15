@@ -1,0 +1,41 @@
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "재귀 강제 삭제 대신 정확한 대상을 확인하고 복구 가능한 삭제를 사용하세요.",
+    match = ["rm -rf build"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["--force", "-f"]],
+    decision = "forbidden",
+    justification = "force push는 금지입니다. 승인된 히스토리 재작성에는 --force-with-lease만 사용하세요.",
+    match = ["git push --force origin main", "git push -f origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", ["commit", "push", "merge", "rebase"]],
+    decision = "prompt",
+    justification = "저장소 히스토리나 원격 상태를 바꾸기 전에 승인을 확인합니다.",
+    match = ["git commit -m message", "git push origin main", "git merge feature", "git rebase main"],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "diff", "log"]],
+    decision = "allow",
+    justification = "읽기 전용 Git 점검입니다.",
+    match = ["git status --short", "git diff --cached", "git log --oneline -10"],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", ["typecheck", "build"]],
+    decision = "allow",
+    justification = "프로젝트에 정의된 검증 명령입니다.",
+    match = ["bun run typecheck", "bun run build"],
+)
+
+prefix_rule(
+    pattern = ["bun", "test"],
+    decision = "allow",
+    justification = "프로젝트 테스트 실행입니다.",
+    match = ["bun test", "bun test src/example.test.ts"],
+)

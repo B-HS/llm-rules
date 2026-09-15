@@ -11,7 +11,7 @@
 
 | 문서 | 범위 | 내용 |
 |------|------|------|
-| [ai-process.md](./ai-process.md) | **AI 작업 프로세스** | AI(Claude Code 등)가 일하는 방식 — 커뮤니케이션(간결·존댓말), docs/ 기반·PROCESS.md 체크리스트, 멈춤·"한 번에 모든 경우의 수" 질문, 신규 프로젝트 스택·환경 합의, 환경 일관성, 검증, 결과 분류 저장(feedback·QA 포함) |
+| [ai-process.md](./ai-process.md) | **AI 작업 프로세스** | Codex 등 AI 에이전트가 일하는 방식 — 커뮤니케이션(간결·존댓말), docs/ 기반·PROCESS.md 체크리스트, 멈춤·"한 번에 모든 경우의 수" 질문, 신규 프로젝트 스택·환경 합의, 환경 일관성, 검증, 결과 분류 저장(feedback·QA 포함) |
 | [common.md](./common.md) | **공통 (FE·BE 전부)** | 언어·런타임, Prettier, 함수, 네이밍, 타입·타입추론·TS 유틸리티, export, import, path alias |
 | [comments.md](./comments.md) | **공통 (FE·BE 전부)** | 코드 주석 금지, 유일한 예외 JSDoc(영어), 설명은 `docs/` 로 |
 | [security.md](./security.md) | **공통 (FE·BE 전부)** | 시크릿·환경변수, 입력 검증(Zod), Injection·XSS, 인증/인가, 에러·로그, 의존성 |
@@ -31,7 +31,7 @@
 규칙끼리 부딪히거나 컨벤션이 답을 주지 않을 때, 아래 사다리를 따른다.
 
 1. **사용자의 명시적 지시** (이번 대화에서 직접 말한 것)
-2. **프로젝트 고유 룰** (그 레포의 `CLAUDE.md` · `AGENTS.md` · `docs/acknowledge` 의 합의)
+2. **프로젝트 고유 룰** (그 레포의 `AGENTS.md` · `CLAUDE.md` · `docs/acknowledge` 의 합의)
 3. **이 컨벤션 묶음** (index 요약과 상세 문서가 다르면 **상세 문서가 우선**)
 4. **그 프로젝트의 기존 코드 패턴**
 
@@ -46,7 +46,7 @@
 
 ### AI 작업 ([ai-process.md](./ai-process.md))
 
-- **항상 간결하게, 존댓말로** 답한다. 미사여구·빈말 금지. (Claude 외 에이전트는 이 컨벤션을 룰 파일에 명시 로드)
+- **항상 간결하게, 존댓말로** 답한다. 미사여구·빈말 금지. 각 에이전트는 이 컨벤션을 네이티브 룰 파일에 명시적으로 로드한다.
 - **이모지·아스키아트 금지** — 응답·코드·UI·커밋 전부. 시각 설명은 실제 렌더·스크린샷으로 한다.
 - 프로젝트 상태는 기억·과거 문서보다 **실제 파일을 신뢰**하고, 어긋난 기록은 즉시 갱신한다.
 - **신규 프로젝트는 스택·환경**(런타임·패키지매니저·FE/BE·DB·배포)을 **먼저 합의**한 뒤 시작한다.
@@ -109,7 +109,7 @@
 ```
 docs/convention/
 ├── index.md       ← (이 문서) 진입점·요약
-├── ai-process.md  ← AI 작업 프로세스 (Claude Code 등)
+├── ai-process.md  ← AI 작업 프로세스 (Codex 등)
 ├── common.md      ← 공통 컨벤션
 ├── comments.md    ← 주석 컨벤션 (코드 주석 금지 · JSDoc · docs/)
 ├── security.md    ← 보안 · 시크릿 (FE·BE 공통)
@@ -125,11 +125,11 @@ docs/convention/
 
 ## 적용 (다른 컴퓨터 포함)
 
-이 레포를 클론한 뒤, 글로벌 `~/.claude/CLAUDE.md` 가 이 컨벤션을 참조하도록 동기화한다.
+Codex를 기본 환경으로 설치하면 `AGENTS.md` 코어, 컨벤션 전문, Hooks, Skills, Custom Agents, Execpolicy Rules가 함께 배포된다.
 
 ```bash
-bun run sync            # = bun run scripts/sync-claude-md.ts
-bun run sync --dry-run  # 변경 미리보기 (파일 수정 안 함)
+bun run install-codex --global --all
+bun run install-codex --global --all --dry-run
 ```
 
-스크립트는 멱등(idempotent)이라 여러 번 실행해도 안전하다. 자세한 동작은 [scripts/sync-claude-md.ts](../../scripts/sync-claude-md.ts) 상단 주석 참고.
+스크립트는 기존 설정을 백업하고 관리 항목만 멱등 갱신한다. 자세한 동작은 [Codex 설치 문서](../codex/install.md)를 참고한다. Claude Code 호환 설치는 [Claude Code 문서](../claudecode/index.md)에 별도로 유지한다.

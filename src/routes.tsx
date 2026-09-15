@@ -11,9 +11,9 @@ export const routes: RouteRecord[] = [
         entry: 'src/components/layout/doc-layout.tsx',
         children: [
             ...docs.map((doc): RouteRecord =>
-                doc.slug === 'index'
-                    ? { index: true, element: <DocPage slug='index' /> }
-                    : { path: doc.slug, element: <DocPage slug={doc.slug} /> },
+                doc.route === '/'
+                    ? { index: true, element: <DocPage slug={doc.slug} /> }
+                    : { path: doc.route.slice(1), element: <DocPage slug={doc.slug} /> },
             ),
             { path: '*', element: <NotFound /> },
         ],

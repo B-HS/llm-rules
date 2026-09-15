@@ -16,72 +16,120 @@ import rehypeStringify from 'rehype-stringify'
 import { visit } from 'unist-util-visit'
 import type { Doc, DocHeading } from '../src/types/docs'
 
-const CONVENTION_DIR = fileURLToPath(new URL('../docs/convention', import.meta.url))
-
 const GITHUB_REPO = process.env.GITHUB_REPO ?? 'B-HS/llm-rules'
 
-const ORDER: Record<string, number> = { index: 0, 'ai-process': 1, common: 2, comments: 3, security: 4, git: 5, frontend: 6, fsd: 7, query: 8, backend: 9, desktop: 10 }
-const LABELS: Record<string, string> = {
-    index: '개요',
-    'ai-process': 'AI 프로세스',
-    common: '공통',
-    comments: '주석',
-    security: '보안',
-    git: 'Git · 커밋',
-    frontend: '프론트엔드',
-    fsd: 'FSD 아키텍처',
-    query: 'TanStack Query',
-    backend: '백엔드',
-    desktop: '데스크톱',
+type DocSection = Doc['section']
+type DocSource = {
+    section: DocSection
+    sectionLabel: string
+    directory: string
+    repositoryDirectory: string
+    routePrefix: string
+    order: string[]
+    labels: Record<string, string>
 }
+
+const DOC_SOURCES: DocSource[] = [
+    {
+        section: 'convention',
+        sectionLabel: '컨벤션',
+        directory: fileURLToPath(new URL('../docs/convention', import.meta.url)),
+        repositoryDirectory: 'docs/convention',
+        routePrefix: '',
+        order: ['index', 'ai-process', 'common', 'comments', 'security', 'git', 'frontend', 'fsd', 'query', 'backend', 'desktop'],
+        labels: {
+            index: '개요',
+            'ai-process': 'AI 프로세스',
+            common: '공통',
+            comments: '주석',
+            security: '보안',
+            git: 'Git · 커밋',
+            frontend: '프론트엔드',
+            fsd: 'FSD 아키텍처',
+            query: 'TanStack Query',
+            backend: '백엔드',
+            desktop: '데스크톱',
+        },
+    },
+    {
+        section: 'codex',
+        sectionLabel: 'Codex',
+        directory: fileURLToPath(new URL('../docs/codex', import.meta.url)),
+        repositoryDirectory: 'docs/codex',
+        routePrefix: '/codex',
+        order: ['index', 'install', 'hooks', 'skills', 'agents-and-rules'],
+        labels: { index: '개요', install: '설치 CLI', hooks: 'Hooks', skills: 'Skills', 'agents-and-rules': 'Agents · Rules' },
+    },
+    {
+        section: 'claude-code',
+        sectionLabel: 'Claude Code',
+        directory: fileURLToPath(new URL('../docs/claudecode', import.meta.url)),
+        repositoryDirectory: 'docs/claudecode',
+        routePrefix: '/claude-code',
+        order: ['index', 'settings', 'hooks', 'commands', 'agents', 'enforcement'],
+        labels: { index: '개요', settings: 'Settings', hooks: 'Hooks', commands: 'Commands', agents: 'Agents', enforcement: 'Enforcement' },
+    },
+]
 
 const VIRTUAL_ID = 'virtual:docs'
 const RESOLVED_ID = '\0' + VIRTUAL_ID
+type VisitTree = Parameters<typeof visit>[0]
 
-const toText = (node: any): string => {
-    if (node.type === 'text') return node.value as string
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const toText = (node: unknown): string => {
+    if (!isRecord(node)) return ''
+    if (node.type === 'text' && typeof node.value === 'string') return node.value
     if (Array.isArray(node.children)) return node.children.map(toText).join('')
     return ''
 }
 
-const collectHeadings = (acc: DocHeading[]) => () => (tree: any) => {
-    visit(tree, 'element', (node: any) => {
+const collectHeadings = (acc: DocHeading[]) => () => (tree: VisitTree) => {
+    visit(tree, 'element', (node: unknown) => {
+        if (!isRecord(node) || typeof node.tagName !== 'string') return
         const match = /^h([1-6])$/.exec(node.tagName)
         if (!match) return
         const depth = Number(match[1])
         if (depth < 2 || depth > 3) return
-        const id = node.properties?.id
+        const id = isRecord(node.properties) ? node.properties.id : undefined
         if (typeof id !== 'string') return
         acc.push({ id, text: toText(node).trim(), depth })
     })
 }
 
-const rewriteLinks = (base: string) => () => (tree: any) => {
-    visit(tree, 'element', (node: any) => {
-        if (node.tagName !== 'a') return
+const rewriteLinks = (base: string, source: DocSource) => () => (tree: VisitTree) => {
+    visit(tree, 'element', (node: unknown) => {
+        if (!isRecord(node) || node.tagName !== 'a' || !isRecord(node.properties)) return
         const href = node.properties?.href
         if (typeof href !== 'string' || !href) return
         if (/^(https?:|mailto:|#|\/\/)/.test(href)) return
 
         const [pathPart, hash] = href.split('#')
+        const resolved = path.posix.normalize(path.posix.join(source.repositoryDirectory, pathPart))
         if (/\.md$/.test(pathPart)) {
-            const name = pathPart.replace(/.*\//, '').replace(/\.md$/, '')
-            const route = name === 'index' ? base : `${base}${name}`
-            node.properties.href = hash ? `${route}#${hash}` : route
-            node.properties['data-doc-link'] = ''
-        } else if (pathPart && !pathPart.startsWith('/')) {
-            const resolved = path.posix.normalize(path.posix.join('docs/convention', pathPart))
-            node.properties.href = `https://github.com/${GITHUB_REPO}/blob/main/${resolved}`
-            node.properties.target = '_blank'
-            node.properties.rel = 'noreferrer'
+            const targetSource = DOC_SOURCES.find(
+                (candidate) => resolved === `${candidate.repositoryDirectory}/index.md` || resolved.startsWith(`${candidate.repositoryDirectory}/`),
+            )
+            if (targetSource) {
+                const name = path.posix.basename(resolved, '.md')
+                const relativeRoute = name === 'index' ? targetSource.routePrefix || '/' : `${targetSource.routePrefix}/${name}`
+                const route = `${base.replace(/\/$/, '')}${relativeRoute}`
+                node.properties.href = hash ? `${route}#${hash}` : route
+                node.properties['data-doc-link'] = ''
+                return
+            }
         }
+        if (!pathPart || pathPart.startsWith('/')) return
+        node.properties.href = `https://github.com/${GITHUB_REPO}/blob/main/${resolved}`
+        node.properties.target = '_blank'
+        node.properties.rel = 'noreferrer'
     })
 }
 
-const buildDoc = async (file: string, base: string): Promise<Doc> => {
+const buildDoc = async (file: string, base: string, source: DocSource): Promise<Doc> => {
     const slug = file.replace(/\.md$/, '')
-    const source = await fs.readFile(path.join(CONVENTION_DIR, file), 'utf-8')
-    const { content } = matter(source)
+    const markdown = await fs.readFile(path.join(source.directory, file), 'utf-8')
+    const { content } = matter(markdown)
     const headings: DocHeading[] = []
 
     const processed = await unified()
@@ -92,7 +140,7 @@ const buildDoc = async (file: string, base: string): Promise<Doc> => {
         .use(rehypeRaw)
         .use(rehypeSlug)
         .use(collectHeadings(headings))
-        .use(rewriteLinks(base))
+        .use(rewriteLinks(base, source))
         .use(rehypeAutolinkHeadings, { behavior: 'wrap' })
         .use(rehypePrettyCode, { theme: { light: 'github-light', dark: 'github-dark' }, keepBackground: false })
         .use(rehypeStringify, { allowDangerousHtml: true })
@@ -102,11 +150,13 @@ const buildDoc = async (file: string, base: string): Promise<Doc> => {
     const title = titleMatch ? titleMatch[1].trim() : slug
 
     return {
-        slug,
-        route: slug === 'index' ? '/' : `/${slug}`,
-        label: LABELS[slug] ?? title,
+        slug: `${source.section}-${slug}`,
+        route: slug === 'index' ? source.routePrefix || '/' : `${source.routePrefix}/${slug}`,
+        section: source.section,
+        sectionLabel: source.sectionLabel,
+        label: source.labels[slug] ?? title,
         title,
-        order: ORDER[slug] ?? 999,
+        order: source.order.indexOf(slug),
         html: String(processed),
         headings,
     }
@@ -117,9 +167,14 @@ export const docsPlugin = (): Plugin => {
     let cache: string | null = null
 
     const buildModule = async () => {
-        const files = (await fs.readdir(CONVENTION_DIR)).filter((file) => file.endsWith('.md'))
-        const docs = await Promise.all(files.map((file) => buildDoc(file, base)))
-        docs.sort((a, b) => a.order - b.order || a.slug.localeCompare(b.slug))
+        const docsBySource = await Promise.all(
+            DOC_SOURCES.map(async (source) => {
+                const files = (await fs.readdir(source.directory)).filter((file) => file.endsWith('.md'))
+                const docs = await Promise.all(files.map((file) => buildDoc(file, base, source)))
+                return docs.sort((left, right) => left.order - right.order || left.slug.localeCompare(right.slug))
+            }),
+        )
+        const docs = docsBySource.flat()
         return `export const docs = ${JSON.stringify(docs)}\n`
     }
 
@@ -138,7 +193,7 @@ export const docsPlugin = (): Plugin => {
             return cache
         },
         async handleHotUpdate(ctx) {
-            if (!ctx.file.startsWith(CONVENTION_DIR)) return
+            if (!DOC_SOURCES.some((source) => ctx.file.startsWith(source.directory))) return
             cache = null
             const mod = ctx.server.moduleGraph.getModuleById(RESOLVED_ID)
             if (mod) ctx.server.moduleGraph.invalidateModule(mod)
