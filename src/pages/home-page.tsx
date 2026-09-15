@@ -13,7 +13,7 @@ const SUPPORT_LAYERS = [
     { label: '기본 지침', codex: 'AGENTS.md', claude: 'CLAUDE.md' },
     { label: '생명주기', codex: 'Hooks', claude: 'Hooks' },
     { label: '오케스트레이터', codex: 'Sol · high', claude: 'Fable · high' },
-    { label: '하위 작업', codex: 'Terra / Luna · high', claude: 'Sonnet · high' },
+    { label: '하위 작업', codex: 'Terra/Luna high · Luna xhigh', claude: 'Sonnet high · Haiku xhigh' },
     { label: '워크플로', codex: 'Subagent workflow', claude: 'Workflow command' },
     { label: '명령 정책', codex: 'Execpolicy Rules', claude: 'Permissions' },
     { label: '응답 규칙', codex: 'AGENTS.md', claude: 'Output Style' },
@@ -35,7 +35,8 @@ export const HomePage: FC = () => (
                 <br />두 에이전트에서 네이티브로 실행합니다.
             </h1>
             <p className='mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg'>
-                공통 컨벤션은 하나로 유지하고 각 환경의 주 모델과 하위 모델이 구현, 리서치, 검증을 나눠 수행한 뒤 자동으로 커밋하고 푸시합니다.
+                공통 컨벤션은 하나로 유지하고 각 환경의 주 모델과 하위 모델이 구현, 리서치, 검증을 나눠 수행한 뒤 추가 승인 없이 자동으로 커밋하고
+                푸시합니다.
             </p>
             <div className='mt-8 flex flex-wrap gap-3'>
                 <Button asChild size='lg'>
@@ -69,7 +70,7 @@ export const HomePage: FC = () => (
                         <span className='rounded-full bg-foreground px-2.5 py-1 text-xs font-medium text-background'>1 command</span>
                     </div>
                     <p className='mt-4 text-sm leading-6 text-muted-foreground'>
-                        Sol 오케스트레이터부터 Hooks, Subagent workflow, Terra/Luna Custom Agents, Rules까지 한 번에 설치합니다.
+                        Sol 오케스트레이터부터 Hooks, Subagent workflow, Terra/Luna Custom Agents, 무승인 Git Rules까지 한 번에 설치합니다.
                     </p>
                     <pre className='mt-5 overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-xs leading-6'>
                         <code className='whitespace-pre-wrap break-all'>{CODEX_INSTALL_COMMAND}</code>
@@ -88,7 +89,7 @@ export const HomePage: FC = () => (
                         <span className='rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium'>2 commands</span>
                     </div>
                     <p className='mt-4 text-sm leading-6 text-muted-foreground'>
-                        공통 컨벤션을 먼저 설치한 뒤 Fable 오케스트레이터와 Sonnet Subagents를 기존 네이티브 레이어에 추가합니다.
+                        공통 컨벤션을 먼저 설치한 뒤 Fable 오케스트레이터와 Sonnet/Haiku Subagents를 기존 네이티브 레이어에 추가합니다.
                     </p>
                     <pre className='mt-5 overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-xs leading-6'>
                         <code className='whitespace-pre-wrap break-all'>{CLAUDE_INSTALL_COMMANDS.join('\n')}</code>
@@ -107,8 +108,8 @@ export const HomePage: FC = () => (
                     같은 규칙, 각 환경에 맞는 실행 계층
                 </h2>
                 <p className='mt-3 text-sm leading-6 text-muted-foreground'>
-                    Claude Code 자산은 기존 구조를 유지하고 Codex 자산은 별도 경로에서 병렬 관리하며, 양쪽 모두 상세 위임과 검증 후 자동 Git 흐름을
-                    적용합니다.
+                    Claude Code 자산은 기존 구조를 유지하고 Codex 자산은 별도 경로에서 병렬 관리하며, 양쪽 모두 상세 위임과 위험비례 최소 검증 후
+                    무승인 자동 Git 흐름을 적용합니다.
                 </p>
             </div>
             <div className='mt-8 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3'>
