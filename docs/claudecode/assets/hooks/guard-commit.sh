@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # guard-commit.sh — PreToolUse(Bash, if Bash(git commit*))
 # git.md §1·§2·§3·§6 + 개인 절대규칙(Co-Authored-By 금지) 을 결정론적으로 강제한다.
-# 차단: exit 2 (+stderr 가 Claude 에게 전달). 통과: exit 0. 파싱 실패는 fail-open(허용).
-# 자동커밋: git config llm-rules.auto-commit true 인 레포는 전 검사 통과 시
-#           permissionDecision=allow 를 출력해 하네스 권한 프롬프트를 생략한다 (git.md §6 예외).
+# 차단: exit 2 (+stderr 가 Claude 에게 전달). 통과: permissionDecision=allow.
+# 이 가드는 커밋을 수행하지 않고, 검사를 통과한 자동 커밋만 허용한다.
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -50,20 +49,24 @@ if [ -n "$staged" ]; then
 fi
 
 # --- 4. Conventional Commits 헤더 검증 (git §1·§2·§3) ---
-# 첫 -m / --message 값을 헤더로 본다. -F(파일) / 에디터 커밋은 검증 생략(fail-open).
-header="$(printf '%s' "$cmd" | grep -oE -- "-m[[:space:]]*('[^']*'|\"[^\"]*\")" | head -n1 | sed -E "s/^-m[[:space:]]*//; s/^['\"]//; s/['\"]$//")"
-if [ -n "$header" ]; then
-    header_line="$(printf '%s' "$header" | head -n1)"
-    types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
-    if ! printf '%s' "$header_line" | grep -Eq "^(${types})(\([a-z0-9._/-]+\))?!?: .+"; then
-        block "Conventional Commits 형식이 아닙니다: '$header_line'  (형식: <type>(scope)?: 설명 / type ∈ ${types})"
-    fi
+# 에디터·템플릿·파일 메시지는 검사할 수 없으므로 차단하고, 인라인 -m/--message 만 허용한다.
+if [[ "$cmd" =~ (^|[[:space:]])(-F|-e|-t|--file|--edit|--template|--no-edit)([[:space:]=]|$) ]]; then
+    block "에디터·템플릿·파일 기반 커밋 메시지는 검사할 수 없습니다. 인라인 -m 또는 --message 로 Conventional Commit 메시지를 지정하세요."
 fi
 
-# --- 5. 자동커밋 합의 레포 — 전 검사 통과 시 권한 프롬프트 생략 (git §6 예외) ---
-auto_commit="$(git config --get llm-rules.auto-commit 2>/dev/null || echo '')"
-case "$auto_commit" in
-    1 | true) jq -nc '{hookSpecificOutput:{hookEventName:"PreToolUse", permissionDecision:"allow", permissionDecisionReason:"llm-rules auto-commit 합의 레포 — 가드 검사 통과"}}' ;;
-esac
+if [[ "$cmd" =~ (^|[[:space:]])(-m|--message)([[:space:]]+|=)(\"[^\"]*\"|\'[^\']*\') ]]; then
+    message="${BASH_REMATCH[4]}"
+    header="${message:1:${#message}-2}"
+else
+    block "커밋 메시지를 검사할 수 없습니다. 인라인 -m 또는 --message 에 따옴표로 감싼 Conventional Commit 메시지를 지정하세요."
+fi
+
+header_line="$(printf '%s' "$header" | head -n1)"
+types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+if ! printf '%s' "$header_line" | grep -Eq "^(${types})(\([a-z0-9._/-]+\))?!?: .+"; then
+    block "Conventional Commits 형식이 아닙니다: '$header_line'  (형식: <type>(scope)?: 설명 / type ∈ ${types})"
+fi
+
+jq -nc '{hookSpecificOutput:{hookEventName:"PreToolUse", permissionDecision:"allow", permissionDecisionReason:"llm-rules 커밋 가드 검사 통과"}}'
 
 exit 0

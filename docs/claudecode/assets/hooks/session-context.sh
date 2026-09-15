@@ -25,20 +25,18 @@ else
 fi
 
 ctx="[llm-rules 컨벤션 — 항상 준수]
-- arrow function 만, return type 미명시, any/enum 금지(unknown 은 경계에서만+즉시 좁힘), 코드 주석 금지(JSDoc 만), 2회 이상일 때만 공통화, 매직넘버·이모지 금지, early return·const 우선.
-- named export 기본, 타입은 원본에서 유도(z.infer/ReturnType/Pick/Omit), useCallback/useMemo 금지(React Compiler), 폼은 react-hook-form+zodResolver.
-- 컴포넌트는 FC<Props>·1파일 1컴포넌트(SFC), 본문 순서 useRef→useState→함수/로직→useEffect.
-- FSD 의존은 app→pages→widgets→features→entities→shared 위→아래로만. barrel(index.ts) 금지. 쿼리는 queryOptions 팩토리+QUERY_KEY 배열 키.
-- 커밋: Conventional Commits, author 사용자 단독, Co-Authored-By/Claude 트레일러 금지, 요청 전 commit/push 금지(auto-commit/push 합의 레포 예외), git add -A/force push 금지.
-- 시크릿은 .env+getEnv() 로만(.env 읽기/쓰기 금지). 종료 전 검증(typecheck→lint→test). 모호하면 추측하지 말고 1줄 객관식으로 질문.
+- arrow function 만, any/enum 금지(unknown 은 경계에서 즉시 좁힘), 코드 주석 금지(JSDoc 만), 2회 이상일 때만 공통화, 매직넘버·이모지 금지, early return·const 우선.
+- named export 기본, 타입은 원본에서 유도(z.infer/ReturnType/Pick/Omit), useCallback/useMemo 금지(React Compiler), FSD 의존은 app→pages→widgets→features→entities→shared 위→아래로만, barrel 금지.
+- 시크릿은 .env+getEnv() 로만(.env 읽기/쓰기 금지). 종료 전 typecheck→lint/format→관련 test→가능한 실행 확인을 실제로 수행한다.
+- Git은 main 오케스트레이터만 소유한다. 변경을 독립적으로 되돌릴 수 있는 논리 단위로 선별 스테이징·검토·자동 commit/push 하고, Conventional Commit·사용자 단독 author·AI 트레일러 금지·force push 금지를 지킨다.
 $detail
 
-[작업 개시 프로토콜 — 세션 첫 요청부터 적용]
-1. 사용자 프롬프트를 정확하게 분석하고, 일말의·아주 사소한 애매함이라도 추측하지 말고 먼저 물어 확정한 뒤 진행을 시작한다. 질문은 한 번에 모아 객관식으로 하고, 애매함이 없으면 바로 진행한다.
-2. 신규 프로젝트이거나 새 기능·라이브러리를 도입할 때 기술 스택이 명시되지 않으면 기본은 컨벤션을 따르되, 어떤 기능(스택)을 쓸지 후보의 장점·단점을 명확하고 짧게 요약해 제시하고 사용자와 정확히 정하고 간다.
-3. 정해진 내용은 프롬프트(대화)에만 두지 말고 docs/ 에도 기록한다 — 결정·합의는 docs/acknowledge, 작업 상태·체크리스트는 docs/PROCESS.md.
-4. 사용자의 말을 전긍정하지 말고 객관적으로 판단해 기술 타당성을 정확히 평가하고, 문제가 있으면 근거와 대안을 함께 제시한다.
-5. git commit·push 는 요청 시에만이 기본이다. 커밋이 예상되는 세션에서 레포에 git config llm-rules.auto-commit / llm-rules.auto-push 가 없으면, 첫 확인 질문 묶음에 자동/수동을 포함해 정하고 git config 로 기록(true=자동)한 뒤 docs/acknowledge 에도 남긴다. 미설정이면 수동(요청 시에만)으로 동작한다. 자동이어도 가드 훅 검사(Conventional Commits·트레일러·시크릿·보호 브랜치·force push)는 항상 선행되고, 커밋 형식·author 단독·선별 스테이징 규칙은 유지한다."
+[작업 개시 프로토콜 — 도구를 쓰는 실행 작업에 적용]
+1. 단순 대화 답변은 직접 처리할 수 있다. 파일 조사·구현·테스트·리서치처럼 도구를 쓰는 실행 작업은 Claude Code subagent workflow로 시작한다.
+2. Fable high 메인은 요구사항·작업 분해·의존 관계·통합·최종 검증·Git만 소유한다. Sonnet high 서브에이전트에는 정확한 목표/DoD, 실제 파일·심볼 근거, 파일 소유권·비목표, 적용 규칙·커맨드, 구현 순서, edge case·금지 우회, 검증 명령·합격 기준, 보고 형식, Git 금지, 의존·대기 관계를 모두 전달한다.
+3. 독립적인 읽기·구현·검증 작업은 병렬로 위임하고, 같은 파일을 쓰거나 선행 결과가 필요한 작업은 직렬로 진행한다. 서브에이전트 결과는 메인이 실제 diff와 검증으로 통합한다.
+4. 2개 파일 또는 2단계 이상 작업은 docs/PROCESS.md 체크리스트를 먼저 읽고 실제 진척에 맞춰 갱신한다. 결정은 docs/acknowledge에 남긴다.
+5. 신규 스택·외부 API는 공식 문서를 확인한다. 범위를 바꾸는 중대한 모호성만 한 번에 질문하고, 안전한 범위 안의 합리적 가정은 명시하고 진행한다."
 
 if [ -f docs/PROCESS.md ]; then
     process="$(head -n 200 docs/PROCESS.md)"

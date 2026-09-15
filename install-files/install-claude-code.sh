@@ -14,10 +14,10 @@ REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
 VERSION="${LLM_RULES_VERSION:-latest}"
 [ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
 
-HOOKS="guard-commit.sh guard-push.sh lint-edit.sh scan-secrets.sh verify-on-stop.sh session-context.sh reinject-rules.sh"
-COMMANDS="audit-conventions audit-fsd audit-backend-domain audit-query verify process save-docs log-feedback"
+HOOKS="guard-commit.sh guard-push.sh lint-edit.sh scan-secrets.sh session-context.sh"
+COMMANDS="workflow audit-conventions audit-fsd audit-backend-domain audit-query verify process save-docs log-feedback"
 ROOT_COMMANDS="prepare-new"
-AGENTS="convention-reviewer fsd-dependency-reviewer type-utility-reviewer backend-convention-reviewer security-reviewer tanstack-query-reviewer desktop-security-reviewer"
+AGENTS="implementation-worker verification-worker research-worker convention-reviewer fsd-dependency-reviewer type-utility-reviewer backend-convention-reviewer security-reviewer tanstack-query-reviewer desktop-security-reviewer"
 
 command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
 command -v tar >/dev/null 2>&1 || { echo "✗ tar 가 필요합니다."; exit 1; }
@@ -85,6 +85,7 @@ dl() { cp "$ASSETS/$1" "$2"; }
 if has_item hooks; then
     mkdir -p "$CLAUDE_DIR/hooks/llm-rules"
     echo "▶ hooks"
+    rm -f "$CLAUDE_DIR/hooks/llm-rules/reinject-rules.sh" "$CLAUDE_DIR/hooks/llm-rules/verify-on-stop.sh"
     for h in $HOOKS; do dl "hooks/$h" "$CLAUDE_DIR/hooks/llm-rules/$h"; chmod +x "$CLAUDE_DIR/hooks/llm-rules/$h"; echo "  ✓ $h"; done
 fi
 if has_item commands; then
@@ -130,14 +131,22 @@ for k in ("allow", "ask", "deny"):
     if merged:
         cur["permissions"][k] = merged
 
+cur["model"] = tmpl["model"]
+cur["effortLevel"] = tmpl["effortLevel"]
+
 MARK = "/hooks/llm-rules/"
 def is_ours(entry):
     return any(MARK in (h.get("command") or "") for h in (entry.get("hooks") or []))
 
 cur.setdefault("hooks", {})
-for event, entries in hooks.items():
-    keep = [e for e in (cur["hooks"].get(event) or []) if not is_ours(e)]
-    cur["hooks"][event] = keep + entries
+for event in set(cur["hooks"]) | set(hooks):
+    keep = [entry for entry in (cur["hooks"].get(event) or []) if not is_ours(entry)]
+    if event in hooks:
+        cur["hooks"][event] = keep + hooks[event]
+    elif keep:
+        cur["hooks"][event] = keep
+    else:
+        del cur["hooks"][event]
 
 os.makedirs(claude_dir, exist_ok=True)
 if os.path.exists(path):
