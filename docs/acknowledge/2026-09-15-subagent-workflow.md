@@ -1,5 +1,7 @@
 # 2026-09-15 — 자동 Git·다중 에이전트 운영 계약
 
+> Git guard 유지, 고정 검증 사다리, 하위 모델 high 고정 결정은 [자율 Git·검증 예산·응답 계약 결정](./2026-09-15-autonomy-verification-response.md)으로 대체되었습니다.
+
 ## 사용자 결정
 
 - 도구를 사용하는 모든 실행 작업은 Codex의 **Subagent workflow** 또는 Claude Code의 **workflow**로 수행합니다.

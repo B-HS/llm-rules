@@ -1,5 +1,7 @@
 # 2026-07-29 — /prepare-new · 작업 개시 프로토콜 · 자동 커밋/푸시 합의
 
+> 일반 commit·push의 guard와 ask 권한 결정은 [자율 Git·검증 예산·응답 계약 결정](./2026-09-15-autonomy-verification-response.md)으로 대체되었습니다.
+
 > CC 에디션 확장 세션의 사용자 결정 기록. 같은 주제 재론 시 이 결정을 따른다.
 
 ## 커맨드
