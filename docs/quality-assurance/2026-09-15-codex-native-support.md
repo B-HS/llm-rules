@@ -29,6 +29,7 @@
 - [x] release 번들 mock으로 원격 설치기를 같은 대상에 두 번 실행해 중복 없음 확인
 - [x] 현재 사용자 글로벌 Codex에 전체 자산 설치 후 수량과 `hooks.json`, Execpolicy 판정 재확인
 - [x] Claude Code 전용 installer·hooks·commands·agents·output-style 파일의 diff 0건 확인
+- [x] 기능 커밋 `cfe10ab`을 `origin/main`에 push
 
 ## 환경 참고
 

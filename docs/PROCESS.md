@@ -14,7 +14,7 @@
 - [x] **3. Codex CLI·원격 설치 고도화** — Bun CLI와 release 번들 기반 curl 설치기 추가. 글로벌·프로젝트·대상 경로·선택 설치·백업·멱등 병합을 지원하고 Bun CLI에는 dry-run 제공
 - [x] **4. 문서·배포 정합성 갱신** — Codex 에디션 문서와 공식 기준 링크, README, package script, 문서 사이트의 컨벤션·Codex·Claude Code 3개 섹션 반영. Claude Code 전용 자산은 변경하지 않음
 - [x] **5. 검증·로컬 적용** — hook·Skill·TOML·JSON·shell·Execpolicy·양쪽 설치기 멱등성·typecheck·GitHub Pages base build 검증 후 글로벌 Codex 설치 완료. 상세: `docs/quality-assurance/2026-09-15-codex-native-support.md`
-- [ ] **6. Git 마무리** — 변경 범위를 검토해 논리 단위로 선별 커밋하고 `origin/main`에 push
+- [x] **6. Git 마무리** — Claude Code 전용 자산 무변경과 staged diff를 확인하고 `cfe10ab feat(codex): 네이티브 지원·설치 CLI 추가`를 `origin/main`에 push
 
 기준 문서: `docs/convention/ai-process.md` · `common.md` · `comments.md` · `git.md` · `security.md` · OpenAI Docs Codex Manual(2026-09-15 갱신본).
 
