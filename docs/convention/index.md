@@ -9,18 +9,18 @@
 
 컨벤션은 적용 범위에 따라 **COMMON / FRONTEND / BACKEND** 세 갈래로 나뉜다.
 
-| 문서 | 범위 | 내용 |
-|------|------|------|
-| [ai-process.md](./ai-process.md) | **AI 작업 프로세스** | Codex 등 AI 에이전트가 일하는 방식 — 커뮤니케이션(간결·존댓말), docs/ 기반·PROCESS.md 체크리스트, 멈춤·"한 번에 모든 경우의 수" 질문, 신규 프로젝트 스택·환경 합의, 환경 일관성, 검증, 결과 분류 저장(feedback·QA 포함) |
-| [common.md](./common.md) | **공통 (FE·BE 전부)** | 언어·런타임, Prettier, 함수, 네이밍, 타입·타입추론·TS 유틸리티, export, import, path alias |
-| [comments.md](./comments.md) | **공통 (FE·BE 전부)** | 코드 주석 금지, 유일한 예외 JSDoc(영어), 설명은 `docs/` 로 |
-| [security.md](./security.md) | **공통 (FE·BE 전부)** | 시크릿·환경변수, 입력 검증(Zod), Injection·XSS, 인증/인가, 에러·로그, 의존성 |
-| [git.md](./git.md) | **공통 (FE·BE 전부)** | Conventional Commits v1.0.0 — 커밋 형식·type·BREAKING CHANGE, 브랜치, 커밋·푸시 안전 규칙 |
-| [frontend.md](./frontend.md) | **프론트엔드 (Next.js / React)** | 컴포넌트(FC·작성순서), React Compiler, JSX inline, 상태(사다리·zustand 조건부), API/Server Actions, 스타일/인증/폼, i18n, 테스트 |
-| [fsd.md](./fsd.md) | **프론트엔드 아키텍처 (필수)** | 레이어 정의, 의존성(참조) 방향 매트릭스, 1파일 1컴포넌트(SFC), Path Alias(=레이어) |
-| [query.md](./query.md) | **프론트엔드 (서버 상태)** | TanStack Query v5 사용지침 — Provider(staleTime), QUERY_KEY 중앙관리, queryOptions/useQuery/useMutation, 서버 프리페치(HydrationBoundary), 무효화 |
-| [backend.md](./backend.md) | **백엔드 (Hono.js)** | 계층형 구조, Factory DI, DTO, 에러 처리, HOF, 응답 헬퍼, DB(Drizzle), 테스트, 환경변수 |
-| [desktop.md](./desktop.md) | **데스크톱 앱 (Electron / Tauri 등)** | 셸·IPC 타입 계약, 권한 최소화, 프레임워크별 구조 (렌더러는 frontend 규칙 적용) |
+| 문서                             | 범위                                  | 내용                                                                                                                                              |
+| -------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [ai-process.md](./ai-process.md) | **AI 작업 프로세스**                  | Codex·Claude Code 다중 에이전트 workflow, 모델·역할 배정, 상세 위임 계약, docs/ 기반·PROCESS.md 체크리스트, 검증, 결과 분류 저장                  |
+| [common.md](./common.md)         | **공통 (FE·BE 전부)**                 | 언어·런타임, Prettier, 함수, 네이밍, 타입·타입추론·TS 유틸리티, export, import, path alias                                                        |
+| [comments.md](./comments.md)     | **공통 (FE·BE 전부)**                 | 코드 주석 금지, 유일한 예외 JSDoc(영어), 설명은 `docs/` 로                                                                                        |
+| [security.md](./security.md)     | **공통 (FE·BE 전부)**                 | 시크릿·환경변수, 입력 검증(Zod), Injection·XSS, 인증/인가, 에러·로그, 의존성                                                                      |
+| [git.md](./git.md)               | **공통 (FE·BE 전부)**                 | Conventional Commits v1.0.0 — 커밋 형식·type·BREAKING CHANGE, 브랜치, 커밋·푸시 안전 규칙                                                         |
+| [frontend.md](./frontend.md)     | **프론트엔드 (Next.js / React)**      | 컴포넌트(FC·작성순서), React Compiler, JSX inline, 상태(사다리·zustand 조건부), API/Server Actions, 스타일/인증/폼, i18n, 테스트                  |
+| [fsd.md](./fsd.md)               | **프론트엔드 아키텍처 (필수)**        | 레이어 정의, 의존성(참조) 방향 매트릭스, 1파일 1컴포넌트(SFC), Path Alias(=레이어)                                                                |
+| [query.md](./query.md)           | **프론트엔드 (서버 상태)**            | TanStack Query v5 사용지침 — Provider(staleTime), QUERY_KEY 중앙관리, queryOptions/useQuery/useMutation, 서버 프리페치(HydrationBoundary), 무효화 |
+| [backend.md](./backend.md)       | **백엔드 (Hono.js)**                  | 계층형 구조, Factory DI, DTO, 에러 처리, HOF, 응답 헬퍼, DB(Drizzle), 테스트, 환경변수                                                            |
+| [desktop.md](./desktop.md)       | **데스크톱 앱 (Electron / Tauri 등)** | 셸·IPC 타입 계약, 권한 최소화, 프레임워크별 구조 (렌더러는 frontend 규칙 적용)                                                                    |
 
 > 적용 우선순위: **COMMON 을 항상 전제**로 하고, 그 위에 FE / BE 문서를 얹는다.
 
@@ -47,6 +47,8 @@
 ### AI 작업 ([ai-process.md](./ai-process.md))
 
 - **항상 간결하게, 존댓말로** 답한다. 미사여구·빈말 금지. 각 에이전트는 이 컨벤션을 네이티브 룰 파일에 명시적으로 로드한다.
+- 도구를 쓰는 작업은 항상 다중 에이전트 workflow로 수행한다. Codex 메인은 `gpt-5.6-sol` `high`, 하위 작업은 `gpt-5.6-terra`·`gpt-5.6-luna` `high`; Claude Code 메인은 `fable` `high`, 하위 작업은 `sonnet` `high`를 사용한다.
+- 메인은 요구사항·분해·통합·검증·Git을 소유한다. 하위 지시에는 목표, 근거, 파일 소유권, 순서, 엣지 케이스, 검증 명령·합격 기준, 보고 형식, 의존 관계를 빠짐없이 적는다.
 - **이모지·아스키아트 금지** — 응답·코드·UI·커밋 전부. 시각 설명은 실제 렌더·스크린샷으로 한다.
 - 프로젝트 상태는 기억·과거 문서보다 **실제 파일을 신뢰**하고, 어긋난 기록은 즉시 갱신한다.
 - **신규 프로젝트는 스택·환경**(런타임·패키지매니저·FE/BE·DB·배포)을 **먼저 합의**한 뒤 시작한다.
@@ -72,7 +74,7 @@
 
 - **시크릿은 코드·저장소·로그·클라이언트 어디에도 노출하지 않는다.** `.env` + `.gitignore`, 백엔드는 `getEnv()` 검증으로만 접근.
 - 외부 입력은 **경계에서 Zod 로 검증**한다. DB 는 ORM 파라미터 바인딩(raw SQL 금지), 출력은 React 자동 이스케이프.
-- 커밋은 **Conventional Commits v1.0.0** (`type(scope): 설명`, 기본 type 영어·설명 한국어). **사용자 요청 전 커밋·푸시 금지.**
+- 커밋은 **Conventional Commits v1.0.0** (`type(scope): 설명`, 기본 type 영어·설명 한국어). 메인 오케스트레이터는 검증된 변경을 독립적으로 되돌릴 수 있는 논리 단위로 나눠 자동 커밋·푸시한다.
 - 커밋 언어·스타일은 별도 지시가 없으면 **그 레포의 과거 커밋을 읽고 맞춘다.** 섞여 있으면 사용자에게 묻고 결정을 `docs/acknowledge` 에 기록해 이후 적용. ([git.md §1.1](./git.md))
 - **AI 트레일러(Co-Authored-By 등) 금지**, `git add -A` 금지(선별 스테이징), force push 금지. 에이전트는 `.env` 를 읽지도 쓰지도 않는다.
 

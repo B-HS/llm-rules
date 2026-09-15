@@ -7,16 +7,16 @@
 
 ## 0. 전문 문서 참조 프로토콜
 
-| 작업 상황 | 작업 전에 읽을 전문 문서 |
-|---|---|
-| 모든 작업 (항상) | `{{LLM_RULES_DIR}}/ai-process.md` |
-| TS/JS 코드 작성 전반 | `{{LLM_RULES_DIR}}/common.md` · `{{LLM_RULES_DIR}}/comments.md` |
-| 프론트엔드 (React / Next.js) | `{{LLM_RULES_DIR}}/frontend.md` · `{{LLM_RULES_DIR}}/fsd.md` |
-| 서버 상태 / TanStack Query | `{{LLM_RULES_DIR}}/query.md` |
-| 백엔드 (Hono / Drizzle) | `{{LLM_RULES_DIR}}/backend.md` |
-| 커밋 · 브랜치 | `{{LLM_RULES_DIR}}/git.md` |
-| 시크릿 · 입력 검증 · 인증 | `{{LLM_RULES_DIR}}/security.md` |
-| 데스크톱 (Electron / Tauri) | `{{LLM_RULES_DIR}}/desktop.md` |
+| 작업 상황                    | 작업 전에 읽을 전문 문서                                        |
+| ---------------------------- | --------------------------------------------------------------- |
+| 모든 작업 (항상)             | `{{LLM_RULES_DIR}}/ai-process.md`                               |
+| TS/JS 코드 작성 전반         | `{{LLM_RULES_DIR}}/common.md` · `{{LLM_RULES_DIR}}/comments.md` |
+| 프론트엔드 (React / Next.js) | `{{LLM_RULES_DIR}}/frontend.md` · `{{LLM_RULES_DIR}}/fsd.md`    |
+| 서버 상태 / TanStack Query   | `{{LLM_RULES_DIR}}/query.md`                                    |
+| 백엔드 (Hono / Drizzle)      | `{{LLM_RULES_DIR}}/backend.md`                                  |
+| 커밋 · 브랜치                | `{{LLM_RULES_DIR}}/git.md`                                      |
+| 시크릿 · 입력 검증 · 인증    | `{{LLM_RULES_DIR}}/security.md`                                 |
+| 데스크톱 (Electron / Tauri)  | `{{LLM_RULES_DIR}}/desktop.md`                                  |
 
 - 이 코어와 전문 문서가 다르면 **전문 문서가 우선**한다.
 - 규칙 충돌 사다리: **사용자 명시 지시 > 프로젝트 고유 룰 > 이 컨벤션 > 기존 코드 패턴.** 컨벤션과 다른 선택을 했으면 사용자에게 알린다.
@@ -43,7 +43,7 @@
 - **요청 범위 밖 수정** — 무관한 리팩토링·리네임·재포맷 금지 (minimal diff).
 - **임의 의존성 추가** — 기존/표준으로 되는지 먼저 확인.
 - **시크릿 하드코딩 / `.env` 읽기·쓰기 / 미검증 입력 사용.**
-- **사용자 요청 전 commit·push(자동 커밋/푸시 합의 레포는 예외 — git §6) / AI 트레일러(`Co-Authored-By` 등) / `git add -A` / force push.**
+- **하위 에이전트의 commit·push / AI 트레일러(`Co-Authored-By` 등) / `git add -A` / force push / 검증 전 자동 커밋.** 메인 오케스트레이터는 git §6에 따라 완료 후 자동 커밋·푸시한다.
 - **검증 없이 "통과했다" 보고.**
 - **확인 사항을 하나씩 끊어 묻기** — 한 번에 모아 질문.
 - **컨텍스트가 길다는 이유로 규칙 완화.**
@@ -54,6 +54,11 @@
 
 - 응답은 **한국어 + 존댓말, 간결하게.** 미사여구·빈말 금지.
 - **세션 시작 시퀀스**: ① 베이스 룰 확인 → ② `docs/PROCESS.md` 읽기(진행 중 체크리스트 파악) → ③ 필요 시 `docs/memory` · `docs/acknowledge`.
+- **도구를 쓰는 모든 작업은 다중 에이전트 workflow로 수행**한다. Codex는 Subagent workflow, Claude Code는 subagent workflow를 사용한다. 순수 대화 답변만 메인이 직접 처리할 수 있다.
+- **메인 오케스트레이터**: Codex `gpt-5.6-sol` reasoning `high`, Claude Code `fable` effort `high`. 요구사항·분해·의존성·파일 소유권·결과 통합·최종 검증·Git을 전담한다.
+- **하위 작업**: Codex는 복합 구현·리서치·의미 검증에 `gpt-5.6-terra` `high`, 좁고 반복적인 조사·기계 검증에 `gpt-5.6-luna` `high`; Claude Code는 구현·리서치·검증에 `sonnet` `high`. 하위 에이전트는 commit·push 금지.
+- 독립 작업은 병렬, 같은 파일·선행 의존 작업은 직렬로 배정한다. 직렬 작업도 최소 하나의 경계가 분명한 하위 작업을 거친다. 메인은 하위 보고를 실제 diff·파일·명령 출력으로 재검증한다.
+- **하위 지시를 상세하게 작성**한다: 목표·완료 조건, 실제 파일/심볼 근거, 소유 범위·비목표, 적용 룰/Skill/Command, 실행 순서, 엣지 케이스·금지 우회, 정확한 검증 명령·합격 기준, 결과 보고 형식, Git 금지, 병렬·직렬·대기 관계를 모두 명시한다.
 - **2개 파일 / 2스텝 이상 작업**은 `docs/PROCESS.md` 에 체크리스트를 만들고 스텝마다 체크한다. 체크리스트 밖 행동 금지 — 필요해지면 멈추고 물은 뒤 추가한다.
 - **모호한 지시**("리팩토링해줘")는 즉시 실행하지 않는다 — 역질문으로 구체화하고 `docs/` 에 기록.
 - 질문은 **결정 1개면 1줄 객관식, 2개 이상이면 한 묶음**(추천안 먼저, "전부 추천안대로" 답변 가능하게).
@@ -108,9 +113,10 @@
 - **Conventional Commits v1.0.0**: `type(scope): 설명` — type 영어(feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert), 마침표 없이 50자 이내. BREAKING CHANGE 는 `!` 또는 대문자 footer. 기본 언어는 한국어 명사형(`~추가`).
 - **언어·스타일은 히스토리 우선**: 별도 지시가 없으면 커밋 전에 `git log --oneline -30` 으로 과거 커밋을 읽고 그 언어·형식에 맞춘다. 히스토리가 없으면 기본값(한국어). **섞여 있으면 사용자에게 묻고**, 결정을 `docs/acknowledge` 에 기록해 이후 커밋·푸시에 계속 적용한다.
 - 브랜치 `<type>/<요약>` kebab-case. `main` 직접 커밋 금지.
-- **요청 전 커밋·푸시 금지.** 예외: 자동 커밋/푸시를 합의한 레포(`git config llm-rules.auto-commit true` / `llm-rules.auto-push true` — 미설정 레포면 첫 확인 때 자동/수동을 물어 기록하고 `docs/acknowledge` 에도 남긴다). 자동이어도 형식·트레일러·시크릿·보호 브랜치 규칙은 그대로 적용된다. 논리 단위 1커밋. **선별 스테이징**(`git add -A`/`.` 금지), 커밋 전 `git status`/`git diff` 확인. **force push 금지**(승인 시에도 `--force-with-lease` 만).
-- 커밋을 여러 개로 나눌 때는 **한 커밋분만 스테이징 → 완료 확인 → 다음** 순서로 진행한다.
+- **메인 오케스트레이터는 구현·검증 완료 후 자동 커밋·푸시**한다. 사용자가 금지했거나 Git/remote/인증이 없으면 실행하지 않고 보고한다. 하위 에이전트는 Git 작업 금지.
+- 독립적으로 되돌릴 수 있는 동작·규칙·배포 단위로 커밋을 나눈다. 관련 구현·테스트·문서는 함께 두고, 동작하지 않는 중간 상태는 커밋하지 않는다. **한 커밋분만 선별 스테이징**(`git add -A`/`.` 금지) → `git status`·working/staged diff 확인 → commit 순서로 진행하고, 전체 검증 뒤 일반 push 한다.
 - **author 는 사용자 단독** — `Co-Authored-By`·`Generated with`·`Codex-Session:`·`Claude-Session:` 등 세션 링크와 AI 서명·트레일러 금지.
+- guard 검사를 위해 commit 메시지는 inline `-m`만 사용한다. `-F`·`--file`·editor 입력은 사용하지 않는다. `--force-with-lease`를 포함한 **모든 force push를 금지**한다.
 
 ---
 
