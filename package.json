@@ -8,6 +8,7 @@
     "build": "vite-react-ssg build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "sync": "bun run scripts/sync-claude-md.ts",
     "init-agents": "bun run scripts/init-agents.ts",
     "install-codex": "bun run scripts/install-codex.ts",
