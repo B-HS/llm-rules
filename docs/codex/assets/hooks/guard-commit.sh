@@ -6,7 +6,7 @@ command -v jq >/dev/null 2>&1 || exit 0
 input="$(cat)"
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)"
 [ -z "$cmd" ] && exit 0
-printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+commit' || exit 0
+printf '%s' "$cmd" | grep -Eq '(^|[;&|[:space:]])git[[:space:]]+commit([[:space:]]|$)' || exit 0
 
 block() {
     echo "차단: $1" >&2
@@ -31,20 +31,22 @@ if printf '%s' "$cmd" | grep -Eiq 'co-authored-by|generated with|claude-session 
     block "커밋 메시지에 AI 서명이나 트레일러가 포함되어 있습니다. author는 사용자 단독이어야 합니다."
 fi
 
+if printf '%s' "$cmd" | grep -Eq -- '(^|[[:space:]])(-F|--file|--template|-t|--edit|-e|--no-edit)([=[:space:]]|$)'; then
+    block "편집기·파일 기반 커밋 메시지는 검사할 수 없습니다. 인라인 -m 메시지 하나만 사용하세요."
+fi
+
 staged="$(git diff --cached --name-only 2>/dev/null || echo '')"
 if [ -n "$staged" ]; then
     bad="$(printf '%s\n' "$staged" | grep -Ei '(^|/)\.env($|\.)|(^|/)secrets/|(^|/)dist/|(^|/)node_modules/|\.pem$|id_rsa' || true)"
     [ -n "$bad" ] && block "스테이지에 커밋하면 안 되는 파일이 있습니다: $(printf '%s' "$bad" | tr '\n' ' ')"
 fi
 
-header="$(printf '%s' "$cmd" | grep -oE -- "(-m|--message)[[:space:]]*('[^']*'|\"[^\"]*\")" | head -n1 | sed -E "s/^(-m|--message)[[:space:]]*//; s/^['\"]//; s/['\"]$//")"
-if [ -n "$header" ]; then
-    header_line="$(printf '%s' "$header" | head -n1)"
-    types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
-    printf '%s' "$header_line" | grep -Eq "^(${types})(\([a-z0-9._/-]+\))?!?: .+" || block "Conventional Commits 형식이 아닙니다: '$header_line'"
-fi
+message_args="$(printf '%s' "$cmd" | grep -oE -- "-m[[:space:]]+('[^']*'|\"[^\"]*\")" || true)"
+message_count="$(printf '%s\n' "$message_args" | sed '/^$/d' | wc -l | tr -d ' ')"
+[ "$message_count" = "1" ] || block "커밋 메시지는 검사 가능한 인라인 -m 메시지 하나여야 합니다."
 
-auto_commit="$(git config --get llm-rules.auto-commit 2>/dev/null || echo '')"
-case "$auto_commit" in
-    1 | true) jq -nc '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"allow",permissionDecisionReason:"llm-rules auto-commit 합의 저장소의 가드 검사 통과"}}' ;;
-esac
+header="$(printf '%s' "$message_args" | sed -E "s/^-m[[:space:]]+//; s/^['\"]//; s/['\"]$//")"
+types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+printf '%s' "$header" | grep -Eq "^(${types})(\([a-z0-9._/-]+\))?!?: .+" || block "Conventional Commits 형식이 아닙니다: '$header'"
+
+jq -nc '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"allow",permissionDecisionReason:"llm-rules commit guard 검사 통과"}}'

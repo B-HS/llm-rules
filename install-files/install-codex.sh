@@ -33,21 +33,22 @@ fi
 
 if [ -z "$ITEMS" ]; then
     if [ -r /dev/tty ]; then
-        printf "항목 [1]instructions [2]hooks [3]skills [4]agents [5]rules, 기본 a=전체: " > /dev/tty
+        printf "항목 [1]instructions [2]config [3]hooks [4]skills [5]agents [6]rules, 기본 a=전체: " > /dev/tty
         read -r selection < /dev/tty || selection=a
         case "$selection" in
-            a* | "") ITEMS="instructions hooks skills agents rules" ;;
+            a* | "") ITEMS="instructions config hooks skills agents rules" ;;
             *)
                 ITEMS=""
                 case "$selection" in *1*) ITEMS="$ITEMS instructions" ;; esac
-                case "$selection" in *2*) ITEMS="$ITEMS hooks" ;; esac
-                case "$selection" in *3*) ITEMS="$ITEMS skills" ;; esac
-                case "$selection" in *4*) ITEMS="$ITEMS agents" ;; esac
-                case "$selection" in *5*) ITEMS="$ITEMS rules" ;; esac
+                case "$selection" in *2*) ITEMS="$ITEMS config" ;; esac
+                case "$selection" in *3*) ITEMS="$ITEMS hooks" ;; esac
+                case "$selection" in *4*) ITEMS="$ITEMS skills" ;; esac
+                case "$selection" in *5*) ITEMS="$ITEMS agents" ;; esac
+                case "$selection" in *6*) ITEMS="$ITEMS rules" ;; esac
                 ;;
         esac
     else
-        ITEMS="instructions hooks skills agents rules"
+        ITEMS="instructions config hooks skills agents rules"
     fi
 fi
 
@@ -81,7 +82,12 @@ export LLM_RULES_INSTALL_ITEMS="$ITEMS"
 python3 <<'PY'
 import json
 import os
+import re
 import shutil
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
 
 source = os.environ["LLM_RULES_INSTALL_SOURCE"]
 location = os.environ["LLM_RULES_INSTALL_LOCATION"]
@@ -98,6 +104,16 @@ docs = ["index", "ai-process", "common", "comments", "security", "git", "fronten
 begin = "<!-- BEGIN: llm-rules (managed by llm-rules/scripts/install-codex.ts) -->"
 legacy_begin = "<!-- BEGIN: llm-rules (managed by llm-rules/scripts/init-agents.ts) -->"
 end = "<!-- END: llm-rules -->"
+retired_hook_scripts = ["reinject-rules.sh", "verify-on-stop.sh"]
+root_config_keys = ["model", "model_reasoning_effort"]
+agent_config_keys = ["enabled", "default_subagent_model", "default_subagent_reasoning_effort", "max_concurrent_threads_per_session"]
+root_config_lines = ["model = \"gpt-5.6-sol\"", "model_reasoning_effort = \"high\""]
+agent_config_lines = [
+    "enabled = true",
+    "default_subagent_model = \"gpt-5.6-terra\"",
+    "default_subagent_reasoning_effort = \"high\"",
+    "max_concurrent_threads_per_session = 4",
+]
 
 def install_instructions():
     agents_path = os.path.join(codex_dir, "AGENTS.md") if location == "global" else os.path.join(root_dir, "AGENTS.md")
@@ -136,11 +152,66 @@ def install_instructions():
 def is_managed_hook(entry):
     return any("/hooks/llm-rules/" in handler.get("command", "") for handler in entry.get("hooks", []) if isinstance(handler, dict))
 
+def remove_toml_assignments(source, keys):
+    return "\n".join(line for line in source.split("\n") if not any(re.match(r"^\s*" + re.escape(key) + r"\s*=", line) for key in keys))
+
+def is_table_header(line):
+    return re.match(r"^\s*(?:\[[^\]\r\n]+\]|\[\[[^\]\r\n]+\]\])\s*(?:#.*)?$", line) is not None
+
+def is_agents_header(line):
+    return re.match(r"^\s*\[agents\]\s*(?:#.*)?$", line) is not None
+
+def merge_managed_config(original):
+    lines = original.splitlines(keepends=True)
+    first_table = next((index for index, line in enumerate(lines) if is_table_header(line)), len(lines))
+    root = remove_toml_assignments("".join(lines[:first_table]), root_config_keys)
+    tables = "".join(lines[first_table:])
+    root_with_managed_keys = ("\n".join(root_config_lines) + "\n" + root.lstrip()).rstrip()
+    table_lines = tables.splitlines(keepends=True)
+    agent_index = next((index for index, line in enumerate(table_lines) if is_agents_header(line)), None)
+    if agent_index is None:
+        suffix = "\n\n" + tables.strip() if tables else ""
+        return root_with_managed_keys + suffix + "\n\n[agents]\n" + "\n".join(agent_config_lines) + "\n"
+    agent_end = next((index for index in range(agent_index + 1, len(table_lines)) if is_table_header(table_lines[index])), len(table_lines))
+    before_agent = "".join(table_lines[:agent_index]).rstrip()
+    agent_header = table_lines[agent_index].strip()
+    agent_body = remove_toml_assignments("".join(table_lines[agent_index + 1:agent_end]), agent_config_keys).strip()
+    after_agent = "".join(table_lines[agent_end:]).strip()
+    agent_section = "\n".join(value for value in [agent_header, "\n".join(agent_config_lines), agent_body] if value)
+    prefix = root_with_managed_keys + "\n\n" + (before_agent + "\n" if before_agent else "")
+    return prefix + agent_section + ("\n" + after_agent if after_agent else "") + "\n"
+
+def install_config():
+    config_path = os.path.join(codex_dir, "config.toml")
+    if tomllib:
+        with open(os.path.join(assets_dir, "config.toml"), "rb") as file:
+            tomllib.load(file)
+    original = ""
+    if os.path.exists(config_path):
+        with open(config_path, encoding="utf-8") as file:
+            original = file.read()
+        if tomllib:
+            tomllib.loads(original)
+    updated = merge_managed_config(original)
+    if tomllib:
+        tomllib.loads(updated)
+    os.makedirs(codex_dir, exist_ok=True)
+    if original and updated != original:
+        shutil.copyfile(config_path, config_path + ".bak")
+    if updated != original:
+        with open(config_path, "w", encoding="utf-8") as file:
+            file.write(updated)
+    print("config 설치 완료: 관리 main·subagent 기본값 병합")
+
 def install_hooks():
     source_hooks = os.path.join(assets_dir, "hooks")
     destination_hooks = os.path.join(codex_dir, "hooks", "llm-rules")
     os.makedirs(destination_hooks, exist_ok=True)
     hook_files = [name for name in os.listdir(source_hooks) if name.endswith(".sh")]
+    for name in retired_hook_scripts:
+        destination = os.path.join(destination_hooks, name)
+        if os.path.exists(destination):
+            os.remove(destination)
     for name in hook_files:
         destination = os.path.join(destination_hooks, name)
         shutil.copyfile(os.path.join(source_hooks, name), destination)
@@ -156,9 +227,14 @@ def install_hooks():
     hook_base = "$HOME/.codex/hooks/llm-rules" if location == "global" else "$(git rev-parse --show-toplevel)/.codex/hooks/llm-rules"
     template = json.loads(template_text.replace("{{HOOKS_DIR}}", hook_base))
     current.setdefault("hooks", {})
+    for event, entries in list(current["hooks"].items()):
+        preserved = [entry for entry in entries if not is_managed_hook(entry)]
+        if preserved:
+            current["hooks"][event] = preserved
+        else:
+            del current["hooks"][event]
     for event, entries in template["hooks"].items():
-        preserved = [entry for entry in current["hooks"].get(event, []) if not is_managed_hook(entry)]
-        current["hooks"][event] = preserved + entries
+        current["hooks"][event] = current["hooks"].get(event, []) + entries
     current.setdefault("description", template["description"])
     os.makedirs(codex_dir, exist_ok=True)
     with open(hooks_path, "w", encoding="utf-8") as file:
@@ -188,6 +264,8 @@ def install_files(source_name, destination_name, suffix, label):
 
 if "instructions" in items:
     install_instructions()
+if "config" in items:
+    install_config()
 if "hooks" in items:
     install_hooks()
 if "skills" in items:

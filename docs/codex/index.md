@@ -1,17 +1,18 @@
 # Codex 에디션
 
-llm-rules의 기본 실행 환경입니다. 컨벤션 본문을 `AGENTS.md`로 주입하는 것에 더해 Codex Hooks, Skills, Custom Agents, Execpolicy Rules로 반복 작업과 기계적 강제를 제공합니다.
+llm-rules의 기본 실행 환경입니다. 컨벤션 본문을 `AGENTS.md`로 주입하는 것에 더해 Codex config, Hooks, Skills, Custom Agents, Execpolicy Rules로 Subagent workflow와 기계적 강제를 제공합니다.
 
 ## Claude Code 기능 대응
 
-| Claude Code | Codex |
-|---|---|
-| `CLAUDE.md` import | `AGENTS.md` 코어와 주제별 전문 |
-| lifecycle hooks | `hooks.json` command hooks |
-| slash commands | Skills |
-| subagents | Custom Agents |
-| settings permissions | Execpolicy Rules |
-| output style | `AGENTS.md` 커뮤니케이션 규칙 |
+| Claude Code             | Codex                              |
+| ----------------------- | ---------------------------------- |
+| `CLAUDE.md` import      | `AGENTS.md` 코어와 주제별 전문     |
+| main·subagent 모델 설정 | `config.toml`의 main·agents 기본값 |
+| lifecycle hooks         | `hooks.json` command hooks         |
+| slash commands          | Skills                             |
+| subagents               | Custom Agents                      |
+| settings permissions    | Execpolicy Rules                   |
+| output style            | `AGENTS.md` 커뮤니케이션 규칙      |
 
 ## 설치
 
@@ -31,17 +32,18 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 ## 구성
 
-| 자산 | 글로벌 위치 | 프로젝트 위치 | 역할 |
-|---|---|---|---|
-| Instructions | `~/.codex/AGENTS.md`, `~/.codex/llm-rules/` | `AGENTS.md`, `.llm-rules/` | 압축 코어 자동 주입과 주제별 전문 참조 |
-| Hooks | `~/.codex/hooks.json`, `~/.codex/hooks/llm-rules/` | `.codex/hooks.json`, `.codex/hooks/llm-rules/` | 편집·Git·세션·종료 시점 강제 |
-| Skills | `~/.agents/skills/llm-rules-*/` | `.agents/skills/llm-rules-*/` | 감사·검증·문서화 워크플로 |
-| Custom Agents | `~/.codex/agents/*.toml` | `.codex/agents/*.toml` | 영역별 읽기 전용 reviewer |
-| Rules | `~/.codex/rules/llm-rules.rules` | `.codex/rules/llm-rules.rules` | 명령의 allow·prompt·forbidden 정책 |
+| 자산          | 글로벌 위치                                        | 프로젝트 위치                                  | 역할                                                |
+| ------------- | -------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------- |
+| Instructions  | `~/.codex/AGENTS.md`, `~/.codex/llm-rules/`        | `AGENTS.md`, `.llm-rules/`                     | 압축 코어 자동 주입과 주제별 전문 참조              |
+| Config        | `~/.codex/config.toml`                             | `.codex/config.toml`                           | Sol high main, Terra high subagent, 동시 4개 기본값 |
+| Hooks         | `~/.codex/hooks.json`, `~/.codex/hooks/llm-rules/` | `.codex/hooks.json`, `.codex/hooks/llm-rules/` | 편집·Git·세션 시점 guardrail                        |
+| Skills        | `~/.agents/skills/llm-rules-*/`                    | `.agents/skills/llm-rules-*/`                  | Subagent workflow·감사·검증·문서화                  |
+| Custom Agents | `~/.codex/agents/*.toml`                           | `.codex/agents/*.toml`                         | 구현·검증·조사 worker와 영역별 reviewer             |
+| Rules         | `~/.codex/rules/llm-rules.rules`                   | `.codex/rules/llm-rules.rules`                 | 명령의 allow·prompt·forbidden 정책                  |
 
 ## 확인
 
-새 Codex 세션에서 `/hooks`로 hook을 검토하고 신뢰 승인합니다. `/skills` 또는 `$llm-rules-...`로 Skills를 확인합니다. Custom Agent는 이름을 지정해 위임하거나 적용되는 `AGENTS.md` 지침에 따라 사용할 수 있습니다.
+새 Codex 세션에서 `/hooks`로 hook을 검토하고 신뢰 승인합니다. `/skills` 또는 `$llm-rules-...`로 Skills를 확인합니다. tool을 사용하는 실행 작업은 `$llm-rules-subagent-workflow`를 적용해 Custom Agent로 위임합니다.
 
 ```bash
 codex execpolicy check --pretty --rules ~/.codex/rules/llm-rules.rules -- git push --force origin main
@@ -55,4 +57,4 @@ codex doctor --summary
 - [Skills](./skills.md)
 - [Custom Agents와 Rules](./agents-and-rules.md)
 
-공식 기준: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) · [Skills](https://learn.chatgpt.com/docs/build-skills) · [Codex CLI와 개발자 명령](https://learn.chatgpt.com/docs/developer-commands?surface=cli) · [설정 레퍼런스](https://learn.chatgpt.com/docs/config-file/config-reference)
+공식 기준: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) · [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) · [Skills](https://learn.chatgpt.com/docs/build-skills) · [Codex CLI와 개발자 명령](https://learn.chatgpt.com/docs/developer-commands?surface=cli) · [설정 레퍼런스](https://learn.chatgpt.com/docs/config-file/config-reference)

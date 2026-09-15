@@ -6,17 +6,24 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["git", "push", ["--force", "-f"]],
+    pattern = ["git", "push", ["--force", "-f", "--force-with-lease", "--force-if-includes"]],
     decision = "forbidden",
-    justification = "force push는 금지입니다. 승인된 히스토리 재작성에는 --force-with-lease만 사용하세요.",
-    match = ["git push --force origin main", "git push -f origin main"],
+    justification = "force push는 모든 형태에서 금지입니다.",
+    match = ["git push --force origin main", "git push -f origin main", "git push --force-with-lease origin main"],
 )
 
 prefix_rule(
-    pattern = ["git", ["commit", "push", "merge", "rebase"]],
+    pattern = ["git", ["commit", "push"]],
+    decision = "allow",
+    justification = "llm-rules guard가 Conventional Commit, AI 트레일러, staging, force push를 검증한 자동 Git 작업입니다.",
+    match = ["git commit -m message", "git push origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", ["merge", "rebase"]],
     decision = "prompt",
-    justification = "저장소 히스토리나 원격 상태를 바꾸기 전에 승인을 확인합니다.",
-    match = ["git commit -m message", "git push origin main", "git merge feature", "git rebase main"],
+    justification = "히스토리를 재구성하기 전에 승인을 확인합니다.",
+    match = ["git merge feature", "git rebase main"],
 )
 
 prefix_rule(

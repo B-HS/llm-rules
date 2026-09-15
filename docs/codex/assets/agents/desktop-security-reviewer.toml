@@ -1,6 +1,8 @@
 name = "desktop_security_reviewer"
 description = "Electron·Tauri 셸과 preload·IPC의 보안 경계와 타입 계약을 읽기 전용으로 검토합니다."
 sandbox_mode = "read-only"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
 developer_instructions = """
 적용되는 AGENTS.md와 §0이 가리키는 desktop.md, security.md, frontend.md를 먼저 읽으세요.
 main, preload, renderer 경계를 추적해 contextIsolation, nodeIntegration, sandbox, contextBridge 최소 노출, 외부 URL 검증, IPC 이벤트 맵 단일 출처와 Parameters·ReturnType 유도를 확인하세요.
