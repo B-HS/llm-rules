@@ -24,6 +24,7 @@ type DocSource = {
     sectionLabel: string
     directory: string
     repositoryDirectory: string
+    indexRoute: string
     routePrefix: string
     order: string[]
     labels: Record<string, string>
@@ -31,10 +32,31 @@ type DocSource = {
 
 const DOC_SOURCES: DocSource[] = [
     {
+        section: 'codex',
+        sectionLabel: 'Codex',
+        directory: fileURLToPath(new URL('../docs/codex', import.meta.url)),
+        repositoryDirectory: 'docs/codex',
+        indexRoute: '/codex',
+        routePrefix: '/codex',
+        order: ['index', 'install', 'hooks', 'skills', 'agents-and-rules'],
+        labels: { index: '개요', install: '설치 CLI', hooks: 'Hooks', skills: 'Skills', 'agents-and-rules': 'Agents · Rules' },
+    },
+    {
+        section: 'claude-code',
+        sectionLabel: 'Claude Code',
+        directory: fileURLToPath(new URL('../docs/claudecode', import.meta.url)),
+        repositoryDirectory: 'docs/claudecode',
+        indexRoute: '/claude-code',
+        routePrefix: '/claude-code',
+        order: ['index', 'settings', 'hooks', 'commands', 'agents', 'enforcement'],
+        labels: { index: '개요', settings: 'Settings', hooks: 'Hooks', commands: 'Commands', agents: 'Agents', enforcement: 'Enforcement' },
+    },
+    {
         section: 'convention',
-        sectionLabel: '컨벤션',
+        sectionLabel: '공통 컨벤션',
         directory: fileURLToPath(new URL('../docs/convention', import.meta.url)),
         repositoryDirectory: 'docs/convention',
+        indexRoute: '/convention',
         routePrefix: '',
         order: ['index', 'ai-process', 'common', 'comments', 'security', 'git', 'frontend', 'fsd', 'query', 'backend', 'desktop'],
         labels: {
@@ -50,24 +72,6 @@ const DOC_SOURCES: DocSource[] = [
             backend: '백엔드',
             desktop: '데스크톱',
         },
-    },
-    {
-        section: 'codex',
-        sectionLabel: 'Codex',
-        directory: fileURLToPath(new URL('../docs/codex', import.meta.url)),
-        repositoryDirectory: 'docs/codex',
-        routePrefix: '/codex',
-        order: ['index', 'install', 'hooks', 'skills', 'agents-and-rules'],
-        labels: { index: '개요', install: '설치 CLI', hooks: 'Hooks', skills: 'Skills', 'agents-and-rules': 'Agents · Rules' },
-    },
-    {
-        section: 'claude-code',
-        sectionLabel: 'Claude Code',
-        directory: fileURLToPath(new URL('../docs/claudecode', import.meta.url)),
-        repositoryDirectory: 'docs/claudecode',
-        routePrefix: '/claude-code',
-        order: ['index', 'settings', 'hooks', 'commands', 'agents', 'enforcement'],
-        labels: { index: '개요', settings: 'Settings', hooks: 'Hooks', commands: 'Commands', agents: 'Agents', enforcement: 'Enforcement' },
     },
 ]
 
@@ -112,7 +116,7 @@ const rewriteLinks = (base: string, source: DocSource) => () => (tree: VisitTree
             )
             if (targetSource) {
                 const name = path.posix.basename(resolved, '.md')
-                const relativeRoute = name === 'index' ? targetSource.routePrefix || '/' : `${targetSource.routePrefix}/${name}`
+                const relativeRoute = name === 'index' ? targetSource.indexRoute : `${targetSource.routePrefix}/${name}`
                 const route = `${base.replace(/\/$/, '')}${relativeRoute}`
                 node.properties.href = hash ? `${route}#${hash}` : route
                 node.properties['data-doc-link'] = ''
@@ -151,7 +155,7 @@ const buildDoc = async (file: string, base: string, source: DocSource): Promise<
 
     return {
         slug: `${source.section}-${slug}`,
-        route: slug === 'index' ? source.routePrefix || '/' : `${source.routePrefix}/${slug}`,
+        route: slug === 'index' ? source.indexRoute : `${source.routePrefix}/${slug}`,
         section: source.section,
         sectionLabel: source.sectionLabel,
         label: source.labels[slug] ?? title,

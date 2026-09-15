@@ -12,7 +12,22 @@ export const SiteHeader: FC = () => (
             <span className='text-muted-foreground'>&lt;/&gt;</span>
             <span>LLM Rules</span>
         </Link>
-        <span className='hidden text-xs text-muted-foreground sm:inline'>· 코딩 컨벤션</span>
+        <span className='hidden text-xs text-muted-foreground sm:inline'>· Codex + Claude Code</span>
+        <nav className='ml-4 hidden items-center gap-1 md:flex' aria-label='주요 문서'>
+            <Link to='/codex' className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
+                Codex
+            </Link>
+            <Link
+                to='/claude-code'
+                className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
+                Claude Code
+            </Link>
+            <Link
+                to='/convention'
+                className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
+                컨벤션
+            </Link>
+        </nav>
         <div className='ml-auto flex items-center gap-1'>
             <a
                 href={GITHUB_URL}

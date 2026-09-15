@@ -5,6 +5,19 @@
 
 ---
 
+## 작업: README 설치 표·정적 문서 사이트 구조 개편 (진행 중)
+
+사용자 요청 — README에서 Codex와 Claude Code 설치 명령을 표로 바로 제공하고, 정적 페이지 구조는 유지하면서 두 네이티브 에디션과 공통 컨벤션의 관계가 명확하도록 웹 구성을 개편한다.
+
+- [x] **1. 현재 정보 구조 감사** — README의 Codex·Claude 설치가 서로 다른 섹션에 분산되고, 사이트 루트가 공통 컨벤션 문서로 바로 연결돼 두 네이티브 에디션 선택과 설치 명령이 첫 화면에 드러나지 않는 구조 확인
+- [x] **2. README 설치 표 개편** — Codex 원격 1단계, Claude Code 원격 2단계와 클론 환경의 글로벌·프로젝트 명령을 표로 전면 배치하고 지원 구조 비교와 범용 호환 경로를 간결하게 유지
+- [x] **3. 정적 사이트 구조 개편** — 전용 홈을 제품 선택·즉시 설치·네이티브 대응표 중심으로 추가하고 Codex→Claude Code→공통 컨벤션 순서의 사이드바, 주요 헤더 링크, 섹션 내부 이전·다음 탐색으로 재구성
+- [ ] **4. 검증·배포** — typecheck, 설정된 lint·format, 기존 테스트, GitHub Pages base build와 생성 경로를 확인한 뒤 선별 커밋·push 및 Actions 완료 확인
+
+기준 문서: `docs/convention/ai-process.md` · `common.md` · `comments.md` · `frontend.md` · `fsd.md`.
+
+---
+
 ## 작업: Codex 본진 전환 — Claude 기능 전면 이식 + CLI 고도화 (진행 중)
 
 사용자 요청 — 현재 Claude Code 중심의 배포·강제 레이어를 Codex에서도 모두 사용할 수 있게 이식하고, Codex 전용 설치 CLI를 완성한 뒤 커밋·푸시한다.
