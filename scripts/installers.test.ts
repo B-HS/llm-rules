@@ -8,7 +8,7 @@ type JsonRecord = Record<string, unknown>
 const REPOSITORY_ROOT = resolve(import.meta.dir, '..')
 const CODEX_INSTALLER = join(REPOSITORY_ROOT, 'scripts', 'install-codex.ts')
 const CLAUDE_INSTALLER = join(REPOSITORY_ROOT, 'scripts', 'install-claude-code.ts')
-const RETIRED_HOOKS = ['reinject-rules.sh', 'verify-on-stop.sh']
+const RETIRED_HOOKS = ['guard-commit.sh', 'guard-push.sh', 'reinject-rules.sh', 'verify-on-stop.sh']
 const HOOK_MARKER = '/hooks/llm-rules/'
 const USER_HOOK_NAME = 'user-hook.sh'
 const USER_HOOK_CONTENT = '#!/usr/bin/env bash\necho user-owned-hook\n'
@@ -57,32 +57,6 @@ const runInstaller = async (installer: string, target: string, items: string[]) 
     return { stdout, stderr }
 }
 
-const runHook = async (hookScript: string, command: string) => {
-    const processResult = Bun.spawn({
-        cmd: ['bash', hookScript],
-        cwd: REPOSITORY_ROOT,
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-    })
-    processResult.stdin.write(JSON.stringify({ tool_input: { command } }))
-    processResult.stdin.end()
-    const [exitCode, stdout, stderr] = await Promise.all([
-        processResult.exited,
-        new Response(processResult.stdout).text(),
-        new Response(processResult.stderr).text(),
-    ])
-    return { exitCode, stdout, stderr }
-}
-
-const assertHookResult = async (hookScript: string, command: string, exitCode: number, shouldAllow: boolean) => {
-    const result = await runHook(hookScript, command)
-    expect(result.exitCode).toBe(exitCode)
-    expect(typeof result.stdout).toBe('string')
-    expect(typeof result.stderr).toBe('string')
-    if (shouldAllow) expect(result.stdout).toContain('permissionDecision')
-}
-
 const createTempTarget = async (name: string) => {
     const root = await mkdtemp(join(tmpdir(), 'llm-rules-installers-'))
     const target = join(root, name)
@@ -123,6 +97,16 @@ name = "keep-skill"
             {
                 description: 'user hooks',
                 hooks: {
+                    PreToolUse: [
+                        {
+                            matcher: '^Bash$',
+                            hooks: [
+                                { type: 'command', command: 'echo user-bash' },
+                                { type: 'command', command: 'bash "/hooks/llm-rules/guard-commit.sh"' },
+                                { type: 'command', command: 'bash "/hooks/llm-rules/guard-push.sh"' },
+                            ],
+                        },
+                    ],
                     Stop: [
                         { matcher: '', hooks: [{ type: 'command', command: 'echo user-stop' }] },
                         { matcher: '', hooks: [{ type: 'command', command: 'bash "/hooks/llm-rules/verify-on-stop.sh"' }] },
@@ -153,10 +137,28 @@ const createClaudeFixture = async (target: string) => {
                 customSetting: 'keep',
                 permissions: {
                     allow: ['Bash(custom:*)'],
-                    ask: [],
+                    ask: ['Bash(git commit:*)', 'Bash(git push:*)'],
                     deny: [],
                 },
                 hooks: {
+                    PreToolUse: [
+                        {
+                            matcher: 'Bash',
+                            hooks: [
+                                { type: 'command', command: 'echo user-bash' },
+                                {
+                                    type: 'command',
+                                    command: '$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules/guard-commit.sh',
+                                    if: 'Bash(git commit*)',
+                                },
+                                {
+                                    type: 'command',
+                                    command: '$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules/guard-push.sh',
+                                    if: 'Bash(git push*)',
+                                },
+                            ],
+                        },
+                    ],
                     Stop: [
                         { matcher: '', hooks: [{ type: 'command', command: 'echo user-stop' }] },
                         { matcher: '', hooks: [{ type: 'command', command: '$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules/verify-on-stop.sh' }] },
@@ -183,13 +185,15 @@ describe('Codex 로컬 설치기', () => {
         const { root, target } = await createTempTarget('codex-target')
         try {
             await createCodexFixture(target)
-            await runInstaller(CODEX_INSTALLER, target, ['--config', '--hooks'])
+            await runInstaller(CODEX_INSTALLER, target, ['--config', '--hooks', '--rules'])
 
             const codexDir = join(target, '.codex')
             const configPath = join(codexDir, 'config.toml')
             const hooksPath = join(codexDir, 'hooks.json')
+            const rulesPath = join(codexDir, 'rules', 'llm-rules.rules')
             const configText = await readFileText(configPath)
             const hooksText = await readFileText(hooksPath)
+            const rulesText = await readFileText(rulesPath)
             const config = Bun.TOML.parse(configText)
             const hooks = readJsonRecord(hooksText)
 
@@ -209,16 +213,23 @@ describe('Codex 로컬 설치기', () => {
             expect(configText).toContain('name = "keep-skill"')
 
             const hookStrings = collectStrings(hooks)
+            expect(hookStrings).toContain('echo user-bash')
             expect(hookStrings).toContain('echo user-stop')
             expect(hookStrings).toContain('echo user-prompt')
+            expect(hookStrings.some((entry) => entry.includes('guard-commit.sh'))).toBe(false)
+            expect(hookStrings.some((entry) => entry.includes('guard-push.sh'))).toBe(false)
             expect(hookStrings.some((entry) => entry.includes('verify-on-stop.sh'))).toBe(false)
             expect(hookStrings.some((entry) => entry.includes('reinject-rules.sh'))).toBe(false)
+            expect(rulesText).toContain('pattern = ["git", ["commit", "push"]]')
+            expect(rulesText).toContain('decision = "allow"')
+            expect(rulesText).not.toContain('llm-rules guard')
             assertManagedStringsAreUnique(hooks)
             for (const file of RETIRED_HOOKS) expect(await Bun.file(join(codexDir, 'hooks', 'llm-rules', file)).exists()).toBe(false)
 
-            await runInstaller(CODEX_INSTALLER, target, ['--config', '--hooks'])
+            await runInstaller(CODEX_INSTALLER, target, ['--config', '--hooks', '--rules'])
             expect(await readFileText(configPath)).toBe(configText)
             expect(await readFileText(hooksPath)).toBe(hooksText)
+            expect(await readFileText(rulesPath)).toBe(rulesText)
         } finally {
             await rm(root, { recursive: true, force: true })
         }
@@ -242,13 +253,17 @@ describe('Claude Code 로컬 설치기', () => {
             expect(settings.model).toBe('fable')
             expect(settings.effortLevel).toBe('high')
             expect(settings.customSetting).toBe('keep')
-            expect(permissions.allow).toEqual(expect.arrayContaining(['Bash(custom:*)']))
+            expect(permissions.allow).toEqual(expect.arrayContaining(['Bash(custom:*)', 'Bash(git commit:*)', 'Bash(git push:*)']))
+            expect(permissions.ask).not.toEqual(expect.arrayContaining(['Bash(git commit:*)', 'Bash(git push:*)']))
             expect(await Bun.file(userHookPath).exists()).toBe(true)
             expect(await readFileText(userHookPath)).toBe(USER_HOOK_CONTENT)
 
             const hookStrings = collectStrings(settings)
+            expect(hookStrings).toContain('echo user-bash')
             expect(hookStrings).toContain('echo user-stop')
             expect(hookStrings).toContain('echo user-prompt')
+            expect(hookStrings.some((entry) => entry.includes('guard-commit.sh'))).toBe(false)
+            expect(hookStrings.some((entry) => entry.includes('guard-push.sh'))).toBe(false)
             expect(hookStrings.some((entry) => entry.includes('verify-on-stop.sh'))).toBe(false)
             expect(hookStrings.some((entry) => entry.includes('reinject-rules.sh'))).toBe(false)
             assertManagedStringsAreUnique(settings)
@@ -260,50 +275,6 @@ describe('Claude Code 로컬 설치기', () => {
             expect(await readFileText(userHookPath)).toBe(USER_HOOK_CONTENT)
         } finally {
             await rm(root, { recursive: true, force: true })
-        }
-    })
-})
-
-describe('Git guard hook 안전성', () => {
-    test('Codex와 Claude Code의 커밋 및 푸시 안전 행렬을 검증한다', async () => {
-        const guards = [
-            {
-                commit: join(REPOSITORY_ROOT, 'docs', 'codex', 'assets', 'hooks', 'guard-commit.sh'),
-                push: join(REPOSITORY_ROOT, 'docs', 'codex', 'assets', 'hooks', 'guard-push.sh'),
-                validCommitCommands: ['git commit -m "feat: guard test"'],
-            },
-            {
-                commit: join(REPOSITORY_ROOT, 'docs', 'claudecode', 'assets', 'hooks', 'guard-commit.sh'),
-                push: join(REPOSITORY_ROOT, 'docs', 'claudecode', 'assets', 'hooks', 'guard-push.sh'),
-                validCommitCommands: ['git commit -m "feat: guard test"', 'git commit --message "feat: guard test"'],
-            },
-        ]
-        const invalidMessageCommands = [
-            'git commit -F message.txt',
-            'git commit --file=message.txt',
-            'git commit --edit',
-            'git commit -e',
-            'git commit --template template.txt',
-            'git commit -t template.txt',
-            'git commit --no-edit',
-            'git commit -m "feat: guard test\n\nCo-Authored-By: AI <ai@example.com>"',
-        ]
-        const validPushCommands = ['git push origin feature']
-        const invalidPushCommands = [
-            'git push --force origin feature',
-            'git push -f origin feature',
-            'git push --force-with-lease origin feature',
-            'git push --force-if-includes origin feature',
-            'git push --force=value origin feature',
-            'git push --force-with-lease=value origin feature',
-            'git push --force-if-includes=value origin feature',
-        ]
-
-        for (const guard of guards) {
-            for (const command of guard.validCommitCommands) await assertHookResult(guard.commit, command, 0, true)
-            for (const command of invalidMessageCommands) await assertHookResult(guard.commit, command, 2, false)
-            for (const command of validPushCommands) await assertHookResult(guard.push, command, 0, true)
-            for (const command of invalidPushCommands) await assertHookResult(guard.push, command, 2, false)
         }
     })
 })
