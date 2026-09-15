@@ -104,7 +104,9 @@ docs = ["index", "ai-process", "common", "comments", "security", "git", "fronten
 begin = "<!-- BEGIN: llm-rules (managed by llm-rules/scripts/install-codex.ts) -->"
 legacy_begin = "<!-- BEGIN: llm-rules (managed by llm-rules/scripts/init-agents.ts) -->"
 end = "<!-- END: llm-rules -->"
-retired_hook_scripts = ["reinject-rules.sh", "verify-on-stop.sh"]
+current_hook_scripts = ["scan-secrets.sh", "lint-edit.sh", "session-context.sh"]
+retired_hook_scripts = ["reinject-rules.sh", "verify-on-stop.sh", "guard-commit.sh", "guard-push.sh"]
+managed_hook_scripts = current_hook_scripts + retired_hook_scripts
 root_config_keys = ["model", "model_reasoning_effort"]
 agent_config_keys = ["enabled", "default_subagent_model", "default_subagent_reasoning_effort", "max_concurrent_threads_per_session"]
 root_config_lines = ["model = \"gpt-5.6-sol\"", "model_reasoning_effort = \"high\""]
@@ -149,8 +151,17 @@ def install_instructions():
         shutil.copyfile(os.path.join(convention_dir, name + ".md"), os.path.join(docs_dir, name + ".md"))
     print("instructions 설치 완료: %s" % agents_path)
 
-def is_managed_hook(entry):
-    return any("/hooks/llm-rules/" in handler.get("command", "") for handler in entry.get("hooks", []) if isinstance(handler, dict))
+def is_managed_hook(handler):
+    return any(
+        re.search(r"/hooks/llm-rules/" + re.escape(name) + r"(?:[\"'\s]|$)", handler.get("command", ""))
+        for name in managed_hook_scripts
+    ) if isinstance(handler, dict) else False
+
+def prune_managed_hooks(entry):
+    hooks = [handler for handler in entry.get("hooks", []) if not is_managed_hook(handler)]
+    if not hooks:
+        return None
+    return dict(entry, hooks=hooks)
 
 def remove_toml_assignments(source, keys):
     return "\n".join(line for line in source.split("\n") if not any(re.match(r"^\s*" + re.escape(key) + r"\s*=", line) for key in keys))
@@ -228,7 +239,7 @@ def install_hooks():
     template = json.loads(template_text.replace("{{HOOKS_DIR}}", hook_base))
     current.setdefault("hooks", {})
     for event, entries in list(current["hooks"].items()):
-        preserved = [entry for entry in entries if not is_managed_hook(entry)]
+        preserved = [pruned for entry in entries if (pruned := prune_managed_hooks(entry)) is not None]
         if preserved:
             current["hooks"][event] = preserved
         else:
@@ -277,4 +288,4 @@ if "rules" in items:
 PY
 
 echo "Codex 설치 완료"
-echo "새 세션에서 /hooks와 /skills를 확인하세요. 새 hook은 /hooks에서 신뢰 승인 후 실행됩니다."
+echo "새 세션에서 /hooks와 /skills를 확인하세요. 편집·세션 hook은 신뢰 승인 후 실행되며 일반 commit·push에는 llm-rules hook이 없습니다."

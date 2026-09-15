@@ -21,12 +21,12 @@ bun run install-codex --global --all --dry-run
 | `--config`       | `config.toml`의 관리 main·subagent 기본값만 병합                                 |
 | `--hooks`        | hook 스크립트와 `hooks.json` 병합                                                |
 | `--skills`       | `llm-rules-*` Skills 10종 설치                                                   |
-| `--agents`       | worker 3종과 reviewer 7종 TOML 설치                                              |
+| `--agents`       | worker 4종과 reviewer 7종 TOML 설치                                              |
 | `--rules`        | Execpolicy Rules 설치                                                            |
 | `--dry-run`      | 쓰기 없이 설치 대상 출력                                                         |
 | `--no-backup`    | `AGENTS.md`, `config.toml`, `hooks.json` 백업 생략                               |
 
-`AGENTS.md`는 관리 마커 안의 블록만 교체하므로 기존 사용자 지침을 보존합니다. 과거 `init-agents.ts`가 만든 관리 블록도 새 Codex 관리 블록으로 승계합니다. `config.toml`은 `model`, `model_reasoning_effort`, `[agents]`의 네 관리 키만 교체하고 나머지 키·섹션·주석은 보존합니다. `hooks.json`은 모든 이벤트에서 llm-rules command 경로를 가진 항목을 먼저 제거한 뒤 현재 자산을 삽입하므로, retired hook entry와 script도 정리하면서 사용자 hook은 유지합니다. Skills, Agents, Rules도 llm-rules가 소유한 이름만 덮어씁니다.
+`AGENTS.md`는 관리 마커 안의 블록만 교체하므로 기존 사용자 지침을 보존합니다. 과거 `init-agents.ts`가 만든 관리 블록도 새 Codex 관리 블록으로 승계합니다. `config.toml`은 `model`, `model_reasoning_effort`, `[agents]`의 네 관리 키만 교체하고 나머지 키·섹션·주석은 보존합니다. `hooks.json`은 모든 이벤트에서 알려진 llm-rules 관리 script의 entry만 제거한 뒤 현재 3종을 삽입합니다. 이전 `guard-commit.sh`, `guard-push.sh`, `reinject-rules.sh`, `verify-on-stop.sh` entry와 script는 정리하며 사용자 hook 파일과 비관리 entry는 유지합니다. Skills, Agents, Rules도 llm-rules가 소유한 이름만 덮어씁니다.
 
 ## 원격 설치
 
@@ -48,4 +48,4 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 - `LLM_RULES_VERSION=v1.2.3`
 - `LLM_RULES_REPO=owner/repo`
 
-프로젝트 `.codex` 자산은 저장소가 Codex에서 trusted 상태일 때만 로드됩니다. 새 hook 또는 내용이 바뀐 hook은 `/hooks`에서 정의를 검토하고 신뢰해야 실행됩니다.
+프로젝트 `.codex` 자산은 저장소가 Codex에서 trusted 상태일 때만 로드됩니다. 편집·세션 hook은 `/hooks`에서 정의를 검토하고 신뢰해야 실행됩니다. 일반 commit·push는 llm-rules hook 없이 Execpolicy allow로 동작하며, 모든 force push는 금지됩니다.

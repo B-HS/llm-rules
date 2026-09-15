@@ -27,8 +27,8 @@ ctx="[llm-rules 컨벤션]
 - 모든 tool-using 실행 작업은 Codex Subagent workflow로 시작합니다. main은 요구사항·분해·통합·Git을 소유하고 subagent는 commit·push하지 않습니다.
 - 독립 범위는 병렬, 공유 파일 또는 선행 의존 범위는 직렬로 배정합니다. 위임에는 목표·완료 조건·실제 파일 근거·소유 범위·규칙·순서·금지 우회·검증·보고 형식·의존 관계를 모두 제공합니다.
 - arrow function, any·enum·코드 주석·매직넘버·이모지, AI 트레일러·git add -A·force push를 금지합니다. .env와 키 파일을 읽거나 쓰지 않습니다.
-- main은 검증 뒤 독립적으로 되돌릴 수 있는 단위로 선별 staging하고 Conventional Commit을 자동 commit·push합니다. guard는 실행기가 아닌 안전 검증기입니다.
-- 종료 전 typecheck→lint·format→test→실행 확인 순서로 검증하고, 작업 상태는 docs/PROCESS.md에 기록합니다.
+- main은 검증 뒤 독립적으로 되돌릴 수 있는 단위로 선별 staging하고 Conventional Commit을 별도 승인 없이 자동 commit·push합니다. 모든 force push는 금지합니다.
+- 변경 위험에 비례한 최소 검증만 실행하고 성공 결과는 재사용합니다. 같은 변경 상태에서 성공한 검증을 반복하지 않으며, 작업 상태는 docs/PROCESS.md에 기록합니다.
 $detail"
 
 if [ -f "$cwd/docs/PROCESS.md" ]; then

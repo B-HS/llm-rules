@@ -108,9 +108,9 @@ const resolveItems = () => {
     log('설치 항목:')
     log('  1) instructions: AGENTS.md 코어와 컨벤션 전문')
     log('  2) config: main·subagent 모델과 동시 실행 기본값')
-    log('  3) hooks: Codex lifecycle hook 5종')
+    log('  3) hooks: Codex lifecycle hook 3종')
     log('  4) skills: 반복 워크플로 10종')
-    log('  5) agents: worker 3종과 reviewer 7종')
+    log('  5) agents: worker 4종과 reviewer 7종')
     log('  6) rules: Git·삭제·검증 Execpolicy')
     const selection = ask('쉼표로 선택하거나 a로 전체 설치, 기본 a: ', 'a')
     if (/^a/i.test(selection)) return [...ALL_ITEMS]
@@ -190,12 +190,19 @@ const getHooksRecord = (value: Record<string, unknown>, path: string) => {
     }
     return value.hooks
 }
-const isManagedHookEntry = (entry: unknown) => {
-    if (!isRecord(entry) || !Array.isArray(entry.hooks)) return false
-    return entry.hooks.some((handler) => isRecord(handler) && typeof handler.command === 'string' && handler.command.includes('/hooks/llm-rules/'))
+const CURRENT_HOOK_SCRIPTS = ['scan-secrets.sh', 'lint-edit.sh', 'session-context.sh']
+const RETIRED_HOOK_SCRIPTS = ['reinject-rules.sh', 'verify-on-stop.sh', 'guard-commit.sh', 'guard-push.sh']
+const MANAGED_HOOK_SCRIPTS = [...CURRENT_HOOK_SCRIPTS, ...RETIRED_HOOK_SCRIPTS]
+const isManagedHookHandler = (handler: unknown) =>
+    isRecord(handler) &&
+    typeof handler.command === 'string' &&
+    MANAGED_HOOK_SCRIPTS.some((file) => new RegExp(`/hooks/llm-rules/${file.replace('.', '\\.')}(["'\\s]|$)`).test(handler.command))
+const pruneManagedHookEntry = (entry: unknown) => {
+    if (!isRecord(entry) || !Array.isArray(entry.hooks)) return entry
+    const hooks = entry.hooks.filter((handler) => !isManagedHookHandler(handler))
+    if (hooks.length === 0) return undefined
+    return { ...entry, hooks }
 }
-
-const RETIRED_HOOK_SCRIPTS = ['reinject-rules.sh', 'verify-on-stop.sh']
 const ROOT_CONFIG_KEYS = ['model', 'model_reasoning_effort']
 const AGENT_CONFIG_KEYS = ['enabled', 'default_subagent_model', 'default_subagent_reasoning_effort', 'max_concurrent_threads_per_session']
 const ROOT_CONFIG_LINES = ['model = "gpt-5.6-sol"', 'model_reasoning_effort = "high"']
@@ -274,7 +281,7 @@ const copyHookScripts = async () => {
     const destinationDir = join(location.codexDir, 'hooks', 'llm-rules')
     const files = (await readdir(sourceDir)).filter((file) => file.endsWith('.sh'))
     if (options.dryRun) {
-        log(`hooks: 스크립트 ${files.length}개 설치, retired script 2개와 관리 hook entry 정리 예정`)
+        log(`hooks: 스크립트 ${files.length}개 설치, retired script ${RETIRED_HOOK_SCRIPTS.length}개와 관리 hook entry 정리 예정`)
         return
     }
     await mkdir(destinationDir, { recursive: true })
@@ -296,7 +303,7 @@ const copyHookScripts = async () => {
 
     for (const [event, entries] of Object.entries(currentHooks)) {
         if (!Array.isArray(entries)) continue
-        const preserved = entries.filter((entry) => !isManagedHookEntry(entry))
+        const preserved = entries.map(pruneManagedHookEntry).filter((entry) => entry !== undefined)
         if (preserved.length === 0) delete currentHooks[event]
         else currentHooks[event] = preserved
     }
@@ -354,5 +361,5 @@ if (options.dryRun) log('dry-run 완료')
 else {
     log('Codex 설치 완료')
     log('새 세션에서 /hooks와 /skills를 확인하고 custom agent를 요청해 동작을 확인하세요.')
-    if (items.includes('hooks')) warn('새로 설치하거나 변경된 hook은 Codex /hooks에서 신뢰 승인 후 실행됩니다.')
+    if (items.includes('hooks')) warn('편집·세션 hook은 Codex /hooks에서 신뢰 승인 후 실행됩니다. 일반 commit·push에는 llm-rules hook이 없습니다.')
 }

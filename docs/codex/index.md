@@ -36,14 +36,14 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 | ------------- | -------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------- |
 | Instructions  | `~/.codex/AGENTS.md`, `~/.codex/llm-rules/`        | `AGENTS.md`, `.llm-rules/`                     | 압축 코어 자동 주입과 주제별 전문 참조              |
 | Config        | `~/.codex/config.toml`                             | `.codex/config.toml`                           | Sol high main, Terra high subagent, 동시 4개 기본값 |
-| Hooks         | `~/.codex/hooks.json`, `~/.codex/hooks/llm-rules/` | `.codex/hooks.json`, `.codex/hooks/llm-rules/` | 편집·Git·세션 시점 guardrail                        |
+| Hooks         | `~/.codex/hooks.json`, `~/.codex/hooks/llm-rules/` | `.codex/hooks.json`, `.codex/hooks/llm-rules/` | 편집·세션 시점 guardrail                            |
 | Skills        | `~/.agents/skills/llm-rules-*/`                    | `.agents/skills/llm-rules-*/`                  | Subagent workflow·감사·검증·문서화                  |
 | Custom Agents | `~/.codex/agents/*.toml`                           | `.codex/agents/*.toml`                         | 구현·검증·조사 worker와 영역별 reviewer             |
 | Rules         | `~/.codex/rules/llm-rules.rules`                   | `.codex/rules/llm-rules.rules`                 | 명령의 allow·prompt·forbidden 정책                  |
 
 ## 확인
 
-새 Codex 세션에서 `/hooks`로 hook을 검토하고 신뢰 승인합니다. `/skills` 또는 `$llm-rules-...`로 Skills를 확인합니다. tool을 사용하는 실행 작업은 `$llm-rules-subagent-workflow`를 적용해 Custom Agent로 위임합니다.
+새 Codex 세션에서 `/hooks`로 편집·세션 hook을 검토하고 신뢰 승인합니다. 일반 commit·push에는 llm-rules hook이나 추가 승인이 없으며 Execpolicy가 allow합니다. 모든 force push는 파괴적 예외로 계속 금지합니다. `/skills` 또는 `$llm-rules-...`로 Skills를 확인하고, tool을 사용하는 실행 작업은 `$llm-rules-subagent-workflow`를 적용해 Custom Agent로 위임합니다.
 
 ```bash
 codex execpolicy check --pretty --rules ~/.codex/rules/llm-rules.rules -- git push --force origin main

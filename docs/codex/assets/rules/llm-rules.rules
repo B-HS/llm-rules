@@ -15,7 +15,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["git", ["commit", "push"]],
     decision = "allow",
-    justification = "llm-rules guard가 Conventional Commit, AI 트레일러, staging, force push를 검증한 자동 Git 작업입니다.",
+    justification = "메인 오케스트레이터가 별도 승인 없이 수행하는 자율형 자동 Git 작업입니다.",
     match = ["git commit -m message", "git push origin main"],
 )
 
