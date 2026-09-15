@@ -5,7 +5,7 @@
 
 ---
 
-## 작업: 자동 커밋·다중 에이전트 오케스트레이션 규칙 고도화 (진행 중)
+## 작업: 자동 커밋·다중 에이전트 오케스트레이션 규칙 고도화 (완료)
 
 사용자 요청 — 작업 결과를 AI 트레일러 없이 논리 단위로 자동 커밋·push하고, 모든 비단순 작업을 Codex의 다중 에이전트 오케스트레이션과 Claude Code의 동등한 워크플로로 수행하며, 주 모델과 하위 모델을 역할별로 배정하고 하위 모델 지시를 정교한 실행 계약으로 작성한다. 기존 hook 중 새 운영 규칙과 충돌하거나 중복되는 항목은 삭제·통합한다.
 
@@ -13,7 +13,7 @@
 - [x] **2. 공통 운영 규칙 설계** — 모든 도구 사용 실행 작업을 Codex Subagent workflow·Claude Code workflow로 처리하고 주 에이전트는 Sol high·Fable high, 구현·리서치·검증은 Terra/Luna high·Sonnet high로 배정. 독립 작업은 병렬, 공유 상태·파일 의존 작업은 직렬로 실행하며 목표·범위·근거·절차·예외·검증·결과 계약을 포함한 상세 위임문을 필수화. Git은 주 에이전트가 검증된 변경을 독립 복원 가능한 논리 단위로 선별 staging→검토→무서명 commit→push하도록 설계. Git·secret·edit guard와 session context는 유지하고 매 프롬프트 재주입·Stop 타입체크 hook은 제거
 - [x] **3. 양쪽 네이티브 실행 계층 반영** — 공통 컨벤션·압축 코어와 Codex Skill·worker/reviewer·config·Hooks·Rules, Claude Code workflow command·worker/reviewer·settings·Hooks에 모델·위임·자동 Git 계약 반영. `reinject-rules`·`verify-on-stop` 제거, 기존 설치의 managed entry/script prune 및 사용자 hook 보존 구현
 - [x] **4. 문서·배포 산출물 동기화** — 기존 Claude Code 상세 기능을 유지하면서 양쪽 에디션 문서, README 설치 표, 정적 홈의 모델·workflow 구성을 실제 자산 수량과 동작에 맞춰 갱신. local·remote 설치기의 항목 목록과 병합 로직 동기화
-- [ ] **5. 검증·커밋·배포** — typecheck, 주요 변경 파일 format, 3개 테스트·164 assertion, shell·JSON·TOML, 양쪽 설치 dry-run·멱등성, 23개 정적 페이지 build 성공. 글로벌 설치에서 Codex·Claude Code agent 각 10개와 retired hook 제거 확인. 논리 단위 commit·push와 Release·Pages 완료 확인 필요
+- [x] **5. 검증·커밋·배포** — typecheck, 주요 변경 파일 format, 3개 테스트·164 assertion, shell·JSON·TOML, 양쪽 설치 dry-run·멱등성, 23개 정적 페이지 build 성공. 글로벌 설치에서 Codex·Claude Code agent 각 10개와 retired hook 제거 확인. 변경을 6개 논리 단위(`2bfbdb5`·`cd37397`·`a7c7c7f`·`fb2506b`·`f32b19e`·`fde2fe1`)로 무서명 commit·push하고 Release `v1.7.0`, Pages, 배포된 양쪽 원격 설치 명령까지 성공 확인
 
 기준 문서: `docs/convention/ai-process.md` · `git.md` · `common.md` · `comments.md` · `security.md` · OpenAI Docs GPT-5.6 Sol·subagent delegation guidance.
 
