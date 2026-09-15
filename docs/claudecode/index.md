@@ -15,10 +15,10 @@ llm-rules 의 컨벤션은 본래 `~/.claude/CLAUDE.md` 에서 참조되는 **�
 
 | | 산문 컨벤션(읽기 기반) | CC 에디션(hook 기반) |
 |---|---|---|
-| 적용 시점 | LLM 이 기억하는 동안 | 매 도구 호출·커밋·세션 시작·workflow 검증 시점 |
+| 적용 시점 | LLM 이 기억하는 동안 | 편집·세션 시작·workflow 검증 시점 |
 | 위반 처리 | 알아서 안 하길 기대 | `exit 2` / `{"decision":"block"}` 로 **차단** |
 | 드리프트 | 컨텍스트가 길면 잊음 | `SessionStart` 에서 컨벤션·workflow 계약 주입 |
-| 검증 | 수동 | Sonnet high 작업자 검증 + Fable high 메인 최종 확인 |
+| 검증 | 수동 | Sonnet high 위험비례 주 검증 + Haiku xhigh 최소 애매성 판정 |
 
 즉, 컨벤션이 "이렇게 작성하라"를 정의한다면, CC 에디션은 기계로 판정 가능한 위반은 "어기면 멈춘다"로, 맥락이 필요한 실행은 workflow의 상세 위임·검증 계약으로 다룹니다. 파싱 실패·도구 부재 등 애매한 상황은 **fail-open**(허용)으로 두어 작업을 막지 않습니다.
 
@@ -44,17 +44,15 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 | hook | 이벤트 | 동작 |
 |---|---|---|
-| `guard-commit.sh` | PreToolUse(Bash, `git commit*`) | `exit 2` 로 차단 — Conventional Commits 헤더 위반 / `Co-Authored-By`·Claude 트레일러 / `main`·`master` 직접 커밋 / 스테이지의 `.env`·secrets·`dist`·`node_modules`·키 파일. 안전 검사를 통과한 인라인 메시지 명령만 allow하며 guard는 커밋을 실행하지 않음 |
-| `guard-push.sh` | PreToolUse(Bash, `git push*`) | force push(`--force`/`-f`/`--force-with-lease`, 플래그 위치 무관) `exit 2` 차단. 일반 push는 안전 검사 통과 시 allow하지만 guard는 push를 실행하지 않음 |
 | `scan-secrets.sh` | PreToolUse(Edit·Write·MultiEdit) | 새로 쓰는 내용에 고신뢰 시크릿(`AKIA…`, `gh[pousr]_…`, `sk-…`, PRIVATE KEY, `xox…`) 이 있으면 `exit 2` 차단. `.md`/`.mdx`/`.txt` 는 예시 오탐 방지로 건너뜀 |
 | `lint-edit.sh` | PostToolUse(Edit·Write·MultiEdit) | TS/JS 만 대상(아니면 no-op). `prettier --write` 후 검사. **HARD**(`{"decision":"block"}`): `useCallback`/`useMemo`, backend 경로의 `throw new Error`·`process.env` 직접접근. **SOFT**(systemMessage 경고): `function` 키워드, 코드 주석, page/layout 외 `export default`, HACK/FIXME/`@ts-ignore`, sanitize 없는 `dangerouslySetInnerHTML` |
 | `session-context.sh` | SessionStart(startup·resume·clear·compact) | 컨벤션 핵심 요약 + 작업 개시 프로토콜 + (있으면) `docs/PROCESS.md` 앞부분을 `additionalContext` 로 주입. `docs/` 디렉토리 보장 |
 
 ### Settings — `permissions`
 
-- **workflow 기본 모델**: Fable high 메인이 요구사항·분해·통합·최종 검증·Git을 소유하고, Sonnet high 서브에이전트가 구현·리서치·검증을 수행합니다.
-- **allow**: `bun`/`bunx`/`tsc`/`bun test` + `git status`·`diff`·`log`·`add`
-- **ask**: `git commit`/`push`/`merge`/`rebase`, `npm`/`pnpm`/`yarn add`
+- **workflow 기본 모델**: Fable high 메인이 요구사항·분해·통합·최종 판정·Git을 소유하고, Sonnet high 서브에이전트가 구현·리서치·주 검증, Haiku xhigh가 필요한 애매성 하나의 최소 보조 판정을 수행합니다.
+- **allow**: `bun`/`bunx`/`tsc`/`bun test` + 일반 `git status`·`diff`·`log`·`add`·`commit`·`push`
+- **ask**: `git merge`/`rebase`, `npm`/`pnpm`/`yarn add`
 - **deny**: `.env` Read/Write/Edit, `secrets/**`, `rm -rf`, `git push --force`/`-f`, `git add .env`
 
 ### Slash Commands — `/llm-rules:<name>`, `<claudeDir>/commands/llm-rules/`
@@ -65,9 +63,9 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 ### Subagents — `<claudeDir>/agents/`
 
-`implementation-worker` · `verification-worker` · `research-worker` · `convention-reviewer` · `fsd-dependency-reviewer` · `type-utility-reviewer` · `backend-convention-reviewer` · `security-reviewer` · `tanstack-query-reviewer` · `desktop-security-reviewer`
+`implementation-worker` · `verification-worker` · `edge-case-verification-worker` · `research-worker` · `convention-reviewer` · `fsd-dependency-reviewer` · `type-utility-reviewer` · `backend-convention-reviewer` · `security-reviewer` · `tanstack-query-reviewer` · `desktop-security-reviewer`
 
-도구를 쓰는 작업은 `/llm-rules:workflow`로 시작합니다. 메인은 상세 위임 계약(목표·근거·소유 범위·규칙·순서·엣지 케이스·검증·보고·Git 경계·의존 관계)을 전달하고, 검증된 변경만 논리 단위로 자동 commit/push합니다.
+도구를 쓰는 작업은 `/llm-rules:workflow`로 시작합니다. 메인은 상세 위임 계약(목표·근거·소유 범위·규칙·순서·엣지 케이스·검증·보고·Git 경계·의존 관계)을 전달하고, 성공 검증을 반복하지 않은 채 검증된 변경만 논리 단위로 일반 commit/push합니다.
 
 ### Output Style — `llm-rules`
 
@@ -82,7 +80,7 @@ CC 에디션은 **enforce 레이어일 뿐**, 규칙의 내용·근거·예시�
 ### CC 에디션 세부
 
 - [enforcement.md](./enforcement.md) — 각 컨벤션 .md 의 규칙 → 메커니즘 매핑 + 강제 모델(HARD/SOFT, exit code, fail-open)
-- [hooks.md](./hooks.md) — 5개 hook 의 입력·판정·출력 상세와 이전 설치 마이그레이션
+- [hooks.md](./hooks.md) — 3개 hook 의 입력·판정·출력 상세와 이전 설치 마이그레이션
 - [commands.md](./commands.md) — slash command 사용법
 - [agents.md](./agents.md) — subagent 역할과 트리거
 - [settings.md](./settings.md) — `permissions`·hook 연결(`settings.json`) 상세

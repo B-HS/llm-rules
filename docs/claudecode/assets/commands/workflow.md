@@ -1,10 +1,10 @@
 ---
-description: 도구를 쓰는 실행 작업을 Fable main과 Sonnet high 서브에이전트 workflow로 분해·위임·통합한다
+description: 도구를 쓰는 실행 작업을 Fable main과 Sonnet high 작업자, Haiku xhigh 보조 검증 workflow로 분해·위임·통합한다
 argument-hint: '[작업 설명 또는 현재 사용자 요청]'
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
-도구를 사용하는 실행 작업을 Claude Code subagent workflow로 진행합니다. 단순 설명·대화 답변은 이 커맨드 대상이 아닙니다. Fable high 메인은 요구사항·분해·의존 관리·통합·최종 검증·Git을 소유하고, 구현·검증·리서치는 Sonnet high 서브에이전트에 위임합니다.
+도구를 사용하는 실행 작업을 Claude Code subagent workflow로 진행합니다. 단순 설명·대화 답변은 이 커맨드 대상이 아닙니다. Fable high 메인은 요구사항·분해·의존 관리·통합·최종 판정·Git을 소유하고, 구현·주 검증·리서치는 Sonnet high 서브에이전트에 위임합니다. 주 검증 뒤 실질적인 애매성만 Haiku xhigh 서브에이전트가 가장 작은 보조 검사로 판정합니다.
 
 작업 요청: `$ARGUMENTS`
 
@@ -19,6 +19,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 - `research-worker`: 코드베이스·공식 문서 사실 확인만 필요한 읽기 전용 조사
 - `implementation-worker`: 소유 파일이 명확한 구현·수정
 - `verification-worker`: typecheck·format·관련 테스트·실행 확인, 또는 명시적으로 허용한 검증 파일 수정
+- `edge-case-verification-worker`: 주 검증 뒤 남은 실질적 애매성 하나의 최소 보조 판정. 성공 검사 반복 금지
 - 기존 reviewer: 구현 후 해당 영역의 의미적 감사
 
 ## 위임 계약
@@ -31,7 +32,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 4. 적용할 프로젝트 규칙·문서·슬래시 커맨드와 우선순위
 5. 순서가 있는 구현 또는 조사 단계
 6. edge case, 호환성 제약, 금지된 우회·추측·검사기 비활성화
-7. 실행할 검증 명령, 순서, 명확한 합격 기준
+7. 변경 위험에 비례한 최소 검증 명령, 기존 성공 결과 재사용 범위, 순서, 명확한 합격 기준
 8. 보고 형식: 변경/근거, 명령별 결과, 실패 재현, 위험·미검증 사항
 9. git commit/push/브랜치·rebase·merge를 하지 않는다는 Git 경계
 10. 병렬 가능 여부, 선행 결과, 완료 후 기다리거나 누구에게 보고할지의 의존·대기 관계
@@ -40,10 +41,12 @@ Sonnet 작업자는 Fable main이 직접 수행하는 수준의 정확성·정�
 
 ## 통합과 Git
 
-1. 메인은 서브에이전트 보고만 믿지 않고 실제 diff·소유 범위·검증 결과를 확인합니다.
-2. 전체 변경에 대해 typecheck, lint/format, 관련 테스트, 가능한 실행 확인을 수행하고 실패를 해결한 뒤 재검증합니다.
-3. 메인만 독립적으로 되돌릴 수 있는 논리 단위로 명시적 파일을 선별 스테이징합니다. staged diff를 확인한 뒤 Conventional Commit 메시지로 자동 commit/push합니다.
-4. `Co-Authored-By`, 도구 서명, AI 세션 트레일러는 넣지 않습니다. force push, 전체 스테이징, 서브에이전트의 Git 작업은 금지합니다.
+1. 메인은 서브에이전트 보고만 믿지 않고 실제 diff·소유 범위·검증 출력을 확인하되, 성공한 명령을 다시 실행하지 않습니다.
+2. 변경 위험과 사용자 실행 경로에 필요한 최소 typecheck, lint/format, 관련 테스트, 실행 확인만 수행합니다. 같은 사실을 확인하는 중복 명령은 생략하고, 실패를 수정한 뒤에는 관련 검사만 한 번 재실행합니다.
+3. 동일한 가정으로 세 번 실패하면 반복 수정을 중단하고 잘못되었을 수 있는 가정과 진단 질문 하나를 제시합니다.
+4. 주 검증 뒤 실질적인 애매성이 남을 때만 `edge-case-verification-worker`를 사용합니다. 지나치게 특수하거나 작은 검사로 판정할 수 없는 경우 실행을 중단하고 `docs/quality-assurance/`에 재현 조건·생략 이유·위험·실행 시점을 테스트 부채로 남깁니다.
+5. 메인만 독립적으로 되돌릴 수 있는 논리 단위로 명시적 파일을 선별 스테이징합니다. staged diff를 확인한 뒤 Conventional Commit 메시지로 자동 commit/push합니다. 일반 commit·push에는 승인 요청이나 Git 전용 guard를 사용하지 않습니다.
+6. `Co-Authored-By`, 도구 서명, AI 세션 트레일러는 넣지 않습니다. force push, 전체 스테이징, 서브에이전트의 Git 작업은 금지합니다.
 
 ## 종료 보고
 

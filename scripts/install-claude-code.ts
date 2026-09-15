@@ -104,7 +104,7 @@ else if (flagged.length) items = flagged
 else {
     log('설치 항목 (쉼표로 다중 선택, a=전체):')
     log('  1) settings.json (hooks + permissions 병합)')
-    log('  2) hooks 스크립트 (5종)')
+    log('  2) hooks 스크립트 (3종)')
     log('  3) slash commands (/llm-rules:*)')
     log('  4) subagents (workflow 작업자 + 리뷰어)')
     log('  5) output-style (한국어·존댓말)')
@@ -128,7 +128,9 @@ if (items.includes('settings') && !items.includes('hooks'))
     warn('settings 만 선택했습니다. hooks 스크립트가 없으면 hook 이 동작하지 않습니다. (--hooks 권장)')
 
 const HOOKS_DEST = join(loc.claudeDir, 'hooks', 'llm-rules')
-const RETIRED_HOOK_FILES = ['reinject-rules.sh', 'verify-on-stop.sh']
+const RETIRED_HOOK_FILES = ['guard-commit.sh', 'guard-push.sh', 'reinject-rules.sh', 'verify-on-stop.sh']
+const MANAGED_HOOK_FILES = new Set([...RETIRED_HOOK_FILES, 'lint-edit.sh', 'scan-secrets.sh', 'session-context.sh'])
+const MIGRATED_GIT_ASK_PERMISSIONS = new Set(['Bash(git commit:*)', 'Bash(git push:*)'])
 const COMMANDS_DEST = join(loc.claudeDir, 'commands', 'llm-rules')
 const ROOT_COMMANDS = ['prepare-new.md']
 const ROOT_COMMANDS_DEST = join(loc.claudeDir, 'commands')
@@ -147,15 +149,19 @@ if (opts.dryRun) log('(dry-run: 파일을 수정하지 않습니다)')
 // --- settings.json 병합 ---
 const MARK = '/hooks/llm-rules/'
 const uniq = (a: string[]) => [...new Set(a)]
-const isOurs = (entry: unknown) => {
-    if (!entry || typeof entry !== 'object') return false
+const pruneManagedHooks = (entry: unknown) => {
+    if (!entry || typeof entry !== 'object') return entry
     const hooks = Reflect.get(entry, 'hooks')
-    if (!Array.isArray(hooks)) return false
-    return hooks.some((hook) => {
-        if (!hook || typeof hook !== 'object') return false
+    if (!Array.isArray(hooks)) return entry
+    const remainingHooks = hooks.filter((hook) => {
+        if (!hook || typeof hook !== 'object') return true
         const command = Reflect.get(hook, 'command')
-        return typeof command === 'string' && command.includes(MARK)
+        if (typeof command !== 'string' || !command.includes(MARK)) return true
+        const hookFile = command.split('/').at(-1) ?? ''
+        return !MANAGED_HOOK_FILES.has(hookFile)
     })
+    if (!remainingHooks.length) return undefined
+    return Object.assign({}, entry, { hooks: remainingHooks })
 }
 
 const mergeSettings = async () => {
@@ -176,18 +182,21 @@ const mergeSettings = async () => {
     // permissions: 합집합 dedupe
     cur.permissions ??= {}
     for (const k of ['allow', 'ask', 'deny'] as const) {
-        const merged = uniq([...(cur.permissions[k] ?? []), ...((tmpl.permissions?.[k] as string[]) ?? [])])
+        const current = (cur.permissions[k] ?? []).filter((permission: string) => k !== 'ask' || !MIGRATED_GIT_ASK_PERMISSIONS.has(permission))
+        const merged = uniq([...current, ...((tmpl.permissions?.[k] as string[]) ?? [])])
         if (merged.length) cur.permissions[k] = merged
+        else delete cur.permissions[k]
     }
 
     cur.model = tmpl.model
     cur.effortLevel = tmpl.effortLevel
 
-    // hooks: 모든 이벤트에서 우리 항목(마커)을 제거한 뒤 현 템플릿만 재추가한다.
     cur.hooks ??= {}
     const events = new Set([...Object.keys(cur.hooks), ...Object.keys(ourHooks)])
     for (const event of events) {
-        const existing = (Array.isArray(cur.hooks[event]) ? cur.hooks[event] : []).filter((entry: unknown) => !isOurs(entry))
+        const existing = (Array.isArray(cur.hooks[event]) ? cur.hooks[event] : [])
+            .map(pruneManagedHooks)
+            .filter((entry: unknown) => entry !== undefined)
         if (event in ourHooks) {
             cur.hooks[event] = [...existing, ...ourHooks[event]]
             continue

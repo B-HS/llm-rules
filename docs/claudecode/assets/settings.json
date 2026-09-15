@@ -14,11 +14,11 @@
             "Bash(git status:*)",
             "Bash(git diff:*)",
             "Bash(git log:*)",
-            "Bash(git add:*)"
+            "Bash(git add:*)",
+            "Bash(git commit:*)",
+            "Bash(git push:*)"
         ],
         "ask": [
-            "Bash(git commit:*)",
-            "Bash(git push:*)",
             "Bash(git merge:*)",
             "Bash(git rebase:*)",
             "Bash(npm install:*)",
@@ -38,28 +38,13 @@
             "Bash(rm -rf:*)",
             "Bash(git add .env:*)",
             "Bash(git push --force:*)",
-            "Bash(git push -f:*)"
+            "Bash(git push -f:*)",
+            "Bash(git push --force-with-lease:*)",
+            "Bash(git push --force-if-includes:*)"
         ]
     },
     "hooks": {
         "PreToolUse": [
-            {
-                "matcher": "Bash",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules/guard-commit.sh",
-                        "if": "Bash(git commit*)",
-                        "timeout": 20
-                    },
-                    {
-                        "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules/guard-push.sh",
-                        "if": "Bash(git push*)",
-                        "timeout": 20
-                    }
-                ]
-            },
             {
                 "matcher": "Edit|Write|MultiEdit",
                 "hooks": [

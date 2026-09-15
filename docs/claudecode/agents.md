@@ -1,7 +1,7 @@
 # 서브에이전트 (Subagents)
 
-> llm-rules Claude Code 에디션의 서브에이전트 10종을 설명합니다. 설치 위치는 `<claudeDir>/agents/` 입니다.
-> 도구를 쓰는 실행 작업은 `/llm-rules:workflow`로 시작합니다. Fable high 메인이 요구사항·분해·통합·최종 검증·Git을 소유하고, Sonnet high 작업자와 리뷰어가 각각 구현·검증·리서치·의미 판단을 맡습니다.
+> llm-rules Claude Code 에디션의 서브에이전트 11종을 설명합니다. 설치 위치는 `<claudeDir>/agents/` 입니다.
+> 도구를 쓰는 실행 작업은 `/llm-rules:workflow`로 시작합니다. Fable high 메인이 요구사항·분해·통합·최종 판정·Git을 소유하고, Sonnet high 작업자와 리뷰어가 구현·주 검증·리서치·의미 판단을 맡습니다. 주 검증 뒤 남은 실질적 애매성만 Haiku xhigh 작업자가 최소 보조 검사로 판정합니다.
 > 서브에이전트는 **hook 이 못 잡는 "판단 필요" 영역을 메우는 리뷰어와, 명시된 파일 범위의 작업자**입니다. 컨벤션 prose 원본은 `docs/convention/*.md` 이며, 서브에이전트는 그 prose 를 복제하지 않고 실행·판단 레이어만 더합니다.
 
 ---
@@ -12,14 +12,14 @@
 
 | 층위 | 수단 | 검사 방식 | 한계 |
 |------|------|-----------|------|
-| **결정론적 강제** | hook (`guard-commit`·`guard-push`·`lint-edit`·`scan-secrets`·`session-context`) | grep 기반 **어휘적(lexical)** 패턴 매칭·세션 컨텍스트 주입 | 문맥·구조·의도를 못 봄 |
+| **결정론적 강제** | hook (`lint-edit`·`scan-secrets`·`session-context`) | grep 기반 **어휘적(lexical)** 패턴 매칭·세션 컨텍스트 주입 | 문맥·구조·의도를 못 봄 |
 | **실행 작업** | `implementation-worker`·`verification-worker`·`research-worker` | Sonnet high가 명시된 소유 범위에서 구현·검증·조사 | 메인의 통합·최종 Git을 대신하지 않음 |
+| **애매성 판정** | `edge-case-verification-worker` | Haiku xhigh가 주 검증 뒤 애매성 하나만 최소 검사 | 성공 검사를 반복하지 않고 제품 파일을 수정하지 않음 |
 | **판단 리뷰** | reviewer 7종 | 코드를 **읽고 맥락으로 판단** | 자동 차단은 못 함(권고) |
 
 hook 이 잡는 것은 정확히 다음과 같은 **문자열 단위 위반**뿐입니다 (자산 스크립트 기준):
 
 - `lint-edit.sh`: `useCallback`/`useMemo` 호출, backend 경로의 `throw new Error(` · `process.env.` 직접접근(HARD=block). `function ` 키워드, `//`·`/*` 주석, page/layout 외 `export default`, `HACK|FIXME|XXX|TODO|@ts-ignore|eslint-disable`, sanitize 없는 `dangerouslySetInnerHTML`(SOFT=경고).
-- `guard-commit.sh`: Conventional Commits 헤더, `Co-Authored-By`/Claude 트레일러, `main`/`master` 직접 커밋, 스테이지의 `.env`·`secrets/`·`dist/`·`node_modules/`·`.pem`·`id_rsa`.
 - `scan-secrets.sh`: `AKIA…`·`gh[pousr]_…`·`sk-…`·`PRIVATE KEY`·`xox…` 고신뢰 시크릿.
 
 hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영역):
@@ -36,9 +36,9 @@ hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영�
 ## workflow 위임
 
 - **항상 workflow로 시작**: 파일 조사·구현·테스트·리서치처럼 도구를 쓰는 작업은 `/llm-rules:workflow`를 사용합니다. Fable high 메인은 독립된 작업은 병렬로, 같은 파일을 수정하거나 선행 결과가 필요한 작업은 직렬로 배정합니다.
-- **작업자 선택**: `research-worker`는 읽기 전용 사실 확인, `implementation-worker`는 소유 파일이 분명한 구현, `verification-worker`는 typecheck·format·관련 테스트·실행 확인을 맡습니다. 세 작업자 모두 Sonnet high이며 Git 작업을 하지 않습니다.
+- **작업자 선택**: `research-worker`는 읽기 전용 사실 확인, `implementation-worker`는 소유 파일이 분명한 구현, `verification-worker`는 위험비례 최소 검증을 맡습니다. 세 작업자는 Sonnet high입니다. `edge-case-verification-worker`는 주 검증 뒤 남은 실질적 애매성만 Haiku xhigh로 판정합니다. 모두 Git 작업을 하지 않습니다.
 - **상세 위임 계약**: 메인은 모든 위임에 ① 목표·완료 조건 ② 확인된 파일·심볼·현재 동작 근거 ③ 소유 범위·비목표 ④ 적용 규칙·커맨드 ⑤ 실행 순서 ⑥ 엣지 케이스·금지 우회 ⑦ 검증 명령·합격 기준 ⑧ 보고 형식 ⑨ commit/push·브랜치·rebase·merge 금지 ⑩ 병렬/직렬 의존·대기 관계를 빠짐없이 전달합니다.
-- **통합과 Git**: 메인은 작업자 보고를 실제 diff·파일·명령 출력으로 재검증하고, 검증된 변경만 논리 단위로 선별 스테이징해 AI 트레일러 없이 자동 commit/push합니다.
+- **통합과 Git**: 메인은 실제 diff와 검증 출력을 확인하되 성공 명령은 반복하지 않습니다. 검증된 변경만 논리 단위로 선별 스테이징해 AI 트레일러 없이 일반 commit/push를 자동 실행합니다.
 
 ## 자동 위임 vs 수동 호출
 
@@ -127,6 +127,7 @@ hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영�
 |---|---|---|
 | implementation-worker | workflow | 명시된 소유 파일의 구현·수정 |
 | verification-worker | workflow | typecheck·format·테스트·실행 결과 해석 |
+| edge-case-verification-worker | workflow | 주 검증 뒤 실질적 애매성의 최소 보조 판정·테스트 부채 보고 |
 | research-worker | workflow | 코드베이스·공식 문서 사실 확인 |
 | convention-reviewer | common·comments·frontend | "2회 이상" 룰, JSX inline, 작성 순서, 네이밍 맥락 |
 | fsd-dependency-reviewer | fsd | 레이어 의존성 방향·책임(완전히 hook 사각지대) |

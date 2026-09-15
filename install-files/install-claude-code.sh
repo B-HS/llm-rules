@@ -14,10 +14,10 @@ REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
 VERSION="${LLM_RULES_VERSION:-latest}"
 [ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
 
-HOOKS="guard-commit.sh guard-push.sh lint-edit.sh scan-secrets.sh session-context.sh"
+HOOKS="lint-edit.sh scan-secrets.sh session-context.sh"
 COMMANDS="workflow audit-conventions audit-fsd audit-backend-domain audit-query verify process save-docs log-feedback"
 ROOT_COMMANDS="prepare-new"
-AGENTS="implementation-worker verification-worker research-worker convention-reviewer fsd-dependency-reviewer type-utility-reviewer backend-convention-reviewer security-reviewer tanstack-query-reviewer desktop-security-reviewer"
+AGENTS="implementation-worker verification-worker edge-case-verification-worker research-worker convention-reviewer fsd-dependency-reviewer type-utility-reviewer backend-convention-reviewer security-reviewer tanstack-query-reviewer desktop-security-reviewer"
 
 command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
 command -v tar >/dev/null 2>&1 || { echo "✗ tar 가 필요합니다."; exit 1; }
@@ -85,7 +85,7 @@ dl() { cp "$ASSETS/$1" "$2"; }
 if has_item hooks; then
     mkdir -p "$CLAUDE_DIR/hooks/llm-rules"
     echo "▶ hooks"
-    rm -f "$CLAUDE_DIR/hooks/llm-rules/reinject-rules.sh" "$CLAUDE_DIR/hooks/llm-rules/verify-on-stop.sh"
+    rm -f "$CLAUDE_DIR/hooks/llm-rules/guard-commit.sh" "$CLAUDE_DIR/hooks/llm-rules/guard-push.sh" "$CLAUDE_DIR/hooks/llm-rules/reinject-rules.sh" "$CLAUDE_DIR/hooks/llm-rules/verify-on-stop.sh"
     for h in $HOOKS; do dl "hooks/$h" "$CLAUDE_DIR/hooks/llm-rules/$h"; chmod +x "$CLAUDE_DIR/hooks/llm-rules/$h"; echo "  ✓ $h"; done
 fi
 if has_item commands; then
@@ -126,21 +126,48 @@ if os.path.exists(path):
         raise SystemExit("✗ %s 가 유효한 JSON 이 아닙니다. 수동 확인 후 다시 실행하세요." % path)
 
 cur.setdefault("permissions", {})
+git_ask_permissions = {"Bash(git commit:*)", "Bash(git push:*)"}
 for k in ("allow", "ask", "deny"):
-    merged = list(dict.fromkeys((cur["permissions"].get(k) or []) + (tmpl.get("permissions", {}).get(k) or [])))
+    current = cur["permissions"].get(k) or []
+    if k == "ask":
+        current = [permission for permission in current if permission not in git_ask_permissions]
+    merged = list(dict.fromkeys(current + (tmpl.get("permissions", {}).get(k) or [])))
     if merged:
         cur["permissions"][k] = merged
+    else:
+        cur["permissions"].pop(k, None)
 
 cur["model"] = tmpl["model"]
 cur["effortLevel"] = tmpl["effortLevel"]
 
 MARK = "/hooks/llm-rules/"
-def is_ours(entry):
-    return any(MARK in (h.get("command") or "") for h in (entry.get("hooks") or []))
+managed_hook_files = {
+    "guard-commit.sh",
+    "guard-push.sh",
+    "reinject-rules.sh",
+    "verify-on-stop.sh",
+    "lint-edit.sh",
+    "scan-secrets.sh",
+    "session-context.sh",
+}
+def prune_managed_hooks(entry):
+    remaining = []
+    for hook in entry.get("hooks") or []:
+        command = hook.get("command") or ""
+        if MARK in command and any(command.endswith("/" + name) for name in managed_hook_files):
+            continue
+        remaining.append(hook)
+    if not remaining:
+        return None
+    return dict(entry, hooks=remaining)
 
 cur.setdefault("hooks", {})
 for event in set(cur["hooks"]) | set(hooks):
-    keep = [entry for entry in (cur["hooks"].get(event) or []) if not is_ours(entry)]
+    keep = []
+    for entry in cur["hooks"].get(event) or []:
+        pruned = prune_managed_hooks(entry)
+        if pruned is not None:
+            keep.append(pruned)
     if event in hooks:
         cur["hooks"][event] = keep + hooks[event]
     elif keep:
