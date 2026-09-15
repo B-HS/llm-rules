@@ -6,11 +6,11 @@
 
 ## 설치
 
-| 환경              | 설치 명령                                                                                                            | 설치 범위                                                   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Codex             | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-codex.sh)"`       | `AGENTS.md`, Hooks, Skills, Custom Agents, Execpolicy Rules |
-| Claude Code 1단계 | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install.sh)"`             | `CLAUDE.md`와 공통 컨벤션                                   |
-| Claude Code 2단계 | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-claude-code.sh)"` | Settings, Hooks, Commands, Subagents, Output Style          |
+| 환경              | 설치 명령                                                                                                            | 설치 범위                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Codex             | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-codex.sh)"`       | `AGENTS.md`, Config, Hooks, Skills, Custom Agents, Execpolicy Rules |
+| Claude Code 1단계 | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install.sh)"`             | `CLAUDE.md`와 공통 컨벤션                                           |
+| Claude Code 2단계 | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-claude-code.sh)"` | Settings, Hooks, Commands, Subagents, Output Style                  |
 
 Claude Code는 1단계와 2단계를 순서대로 실행합니다. 각 설치기는 글로벌과 프로젝트 범위를 대화형으로 선택합니다.
 
@@ -25,16 +25,17 @@ Claude Code는 1단계와 2단계를 순서대로 실행합니다. 각 설치기
 
 ## 지원 구조
 
-| 공통 역할       | Codex                         | Claude Code           |
-| --------------- | ----------------------------- | --------------------- |
-| 기본 지침       | `AGENTS.md`                   | `CLAUDE.md`           |
-| 생명주기 자동화 | `hooks.json` Hooks            | `settings.json` Hooks |
-| 반복 워크플로   | Skills                        | Slash Commands        |
-| 전문 리뷰       | Custom Agents                 | Subagents             |
-| 명령 정책       | Execpolicy Rules              | Permissions           |
-| 응답 규칙       | `AGENTS.md` 커뮤니케이션 규칙 | Output Style          |
+| 공통 역할              | Codex                         | Claude Code           |
+| ---------------------- | ----------------------------- | --------------------- |
+| 기본 지침              | `AGENTS.md`                   | `CLAUDE.md`           |
+| 생명주기 자동화        | `hooks.json` Hooks            | `settings.json` Hooks |
+| 다중 에이전트 workflow | Subagent workflow Skill       | Workflow Command      |
+| 하위 작업              | Terra/Luna Custom Agents      | Sonnet Subagents      |
+| 메인 모델              | Sol high                      | Fable high            |
+| 명령 정책              | Execpolicy Rules              | Permissions           |
+| 응답 규칙              | `AGENTS.md` 커뮤니케이션 규칙 | Output Style          |
 
-Claude Code 전용 자산은 기존 구조를 유지하고 Codex 자산은 별도 경로에 병렬 관리합니다.
+Claude Code 전용 자산은 기존 구조를 유지하고 Codex 자산은 별도 경로에 병렬 관리합니다. 메인 오케스트레이터가 상세한 하위 작업 계약을 작성하고, 독립 작업은 병렬로 실행한 뒤 결과를 통합·검증·자동 커밋·푸시합니다.
 
 ## 범용 에이전트 호환
 
