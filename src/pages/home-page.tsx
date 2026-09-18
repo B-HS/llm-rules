@@ -13,7 +13,7 @@ const SUPPORT_LAYERS = [
     { label: '기본 지침', codex: 'AGENTS.md', claude: 'CLAUDE.md' },
     { label: '생명주기', codex: 'Hooks', claude: 'Hooks' },
     { label: '오케스트레이터', codex: 'Sol high / Terra medium', claude: 'Fable · high' },
-    { label: '하위 작업', codex: 'Terra medium/high · Luna low/high', claude: 'Sonnet high · Haiku xhigh' },
+    { label: '하위 작업', codex: 'Terra medium/high · Luna low/medium, 필요 시 high/xhigh', claude: 'Sonnet high · Haiku xhigh' },
     { label: '워크플로', codex: 'Subagent workflow', claude: 'Workflow command' },
     { label: '명령 정책', codex: 'Execpolicy Rules', claude: 'Permissions' },
     { label: '응답 규칙', codex: 'AGENTS.md', claude: 'Output Style' },

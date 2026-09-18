@@ -30,7 +30,7 @@ Claude Code는 1단계와 2단계를 순서대로 실행합니다. 각 설치기
 | 기본 지침              | `AGENTS.md`                   | `CLAUDE.md`               |
 | 생명주기 자동화        | `hooks.json` Hooks            | `settings.json` Hooks     |
 | 다중 에이전트 workflow | Subagent workflow Skill       | Workflow Command          |
-| 하위 작업              | Terra medium/high · Luna low/high | Sonnet high · Haiku xhigh |
+| 하위 작업              | Terra medium/high · Luna low/medium, 필요 시 high/xhigh | Sonnet high · Haiku xhigh |
 | 메인 모델              | 작업별 Sol high 또는 Terra medium | Fable high                |
 | 명령 정책              | Execpolicy Rules              | Permissions               |
 | 응답 규칙              | `AGENTS.md` 커뮤니케이션 규칙 | Output Style              |
