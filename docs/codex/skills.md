@@ -1,6 +1,6 @@
 # Codex Skills
 
-Codex의 반복 절차는 Skills로 제공합니다. tool을 사용하는 실행 작업에는 `$llm-rules-subagent-workflow`를 먼저 적용합니다.
+Codex의 반복 절차는 Skills로 제공합니다. 새 tool-using 실행 작업은 먼저 workflow 사용 여부를 한 번 묻고, 사용자가 선택했거나 `$llm-rules-subagent-workflow`를 직접 호출한 경우에만 Subagent workflow를 적용합니다. 선택하지 않으면 main이 직접 수행합니다.
 
 | Skill                             | 역할                                                                |
 | --------------------------------- | ------------------------------------------------------------------- |

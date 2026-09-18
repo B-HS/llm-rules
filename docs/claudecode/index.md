@@ -65,7 +65,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 `implementation-worker` · `verification-worker` · `edge-case-verification-worker` · `research-worker` · `convention-reviewer` · `fsd-dependency-reviewer` · `type-utility-reviewer` · `backend-convention-reviewer` · `security-reviewer` · `tanstack-query-reviewer` · `desktop-security-reviewer`
 
-도구를 쓰는 작업은 `/llm-rules:workflow`로 시작합니다. 메인은 상세 위임 계약(목표·근거·소유 범위·규칙·순서·엣지 케이스·검증·보고·Git 경계·의존 관계)을 전달하고, 성공 검증을 반복하지 않은 채 검증된 변경만 논리 단위로 일반 commit/push합니다.
+새 도구 사용 작업은 시작 전에 workflow 사용 여부를 한 번 묻고 답을 기다립니다. 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 이전 선택을 승계하지 않습니다. 사용자가 선택하거나 `/llm-rules:workflow`를 직접 호출하면 메인은 상세 위임 계약(목표·근거·소유 범위·규칙·순서·엣지 케이스·검증·보고·Git 경계·의존 관계)을 전달하고, 성공 검증을 반복하지 않은 채 검증된 변경만 논리 단위로 일반 commit/push합니다. 선택하지 않으면 main이 직접 수행합니다.
 
 ### Output Style — `llm-rules`
 

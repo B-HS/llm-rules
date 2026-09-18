@@ -58,6 +58,7 @@ llm-rules Claude Code 에디션이 설치하는 **10개 슬래시 커맨드**입
 - **목적**: 파일 조사·구현·테스트·리서치 같은 도구 사용 작업을 Claude Code subagent workflow로 수행합니다. Fable high 메인이 요구사항·작업 분해·의존성·파일 소유권·통합·최종 판정·Git을 소유하고, Sonnet high 작업자는 구현·주 검증·조사를 수행합니다. 주 검증 뒤 실질적 애매성만 Haiku xhigh 작업자가 최소 보조 검사로 판정합니다.
 - **사용법**: `/llm-rules:workflow <작업 설명>`
 - **예시**: `/llm-rules:workflow 결제 API의 입력 검증과 관련 테스트를 추가해 주세요`
+- **선택 처리**: 이 커맨드를 직접 호출하면 현재 작업의 workflow **사용** 선택으로 간주하므로 중복 질문하지 않습니다.
 - **위임 계약**: 메인은 작업자에게 목표·완료 조건, 실제 파일·심볼 근거, 소유 범위·비목표, 적용 규칙·커맨드, 실행 순서, 엣지 케이스·금지 우회, 검증 명령·합격 기준, 보고 형식, Git 금지, 병렬/직렬 의존·대기 관계를 구체적으로 전달합니다. 작업자는 다른 소유 파일이나 Git 이력을 변경하지 않습니다.
 - **통합**: 메인은 실제 diff와 검증 출력을 확인하되 성공 명령을 반복하지 않습니다. 검증된 결과를 독립적으로 되돌릴 수 있는 논리 단위로 선별 스테이징하고, AI 트레일러 없이 일반 commit/push를 승인·Git guard 없이 자동 실행합니다.
 
@@ -65,7 +66,7 @@ llm-rules Claude Code 에디션이 설치하는 **10개 슬래시 커맨드**입
 - **목적**: `ai-process.md` §1·§2 에 따라 `docs/PROCESS.md` 를 생성·갱신합니다. 작업 a·b·c·d 항목을 markdown 체크리스트로 정리하고, 매 스텝의 상태를 체크합니다. 세션이 바뀌어도 작업 연속성을 보장하기 위한 단일 작업 상태 파일입니다.
 - **사용법**: `/llm-rules:process`
 - **인자**: (선택) 새로 추가할 작업 설명. 생략 시 현재 `PROCESS.md` 상태를 점검·갱신.
-- **연계**: `session-context.sh` 훅이 세션 시작/재개 시 `docs/PROCESS.md` 앞부분을 컨텍스트로 자동 주입합니다.
+- **연계**: 현재 작업의 workflow 선택이 없으면 먼저 한 번 묻고 답을 받은 뒤 파일을 읽습니다. `session-context.sh` 훅은 세션 시작/재개 시 `docs/PROCESS.md` 앞부분과 같은 선택 게이트를 컨텍스트로 자동 주입합니다.
 
 ### `/llm-rules:verify`
 - **목적**: `ai-process.md` §8.1에 따라 변경 위험과 실행 경로에 필요한 최소 typecheck·lint/format·관련 테스트·실행 확인을 한 번 수행합니다. 이미 성공한 결과는 재사용하고 실패 수정 뒤 관련 검사만 한 번 다시 실행합니다.
@@ -105,7 +106,7 @@ llm-rules Claude Code 에디션이 설치하는 **10개 슬래시 커맨드**입
 - **사용법**: `/prepare-new`
 - **인자**: (선택) 추가로 강조할 컨텍스트.
 - **특징**: 유일하게 네임스페이스 없이 설치됩니다(`<claudeDir>/commands/prepare-new.md`). `disable-model-invocation: true` 라 모델이 임의 호출하지 못하고 사용자가 명시적으로만 실행합니다. 문서와 재개 프롬프트만 산출하며 애플리케이션 코드는 수정하지 않습니다.
-- **연계**: `session-context.sh` 훅의 `docs/PROCESS.md` 주입, `/llm-rules:save-docs` 의 분류 저장과 보완 관계입니다 — save-docs 가 작업 단위 기록이라면 prepare-new 는 세션 전체의 스냅샷·인수인계입니다.
+- **연계**: 현재 작업의 workflow 선택이 없으면 먼저 한 번 묻습니다. 생성하는 재개 프롬프트는 이전 선택을 승계하지 않고, 새 세션에서 컨텍스트 복원 전에 workflow 사용 여부를 다시 한 번 묻고 답을 기다리게 합니다. `session-context.sh` 훅의 `docs/PROCESS.md` 주입, `/llm-rules:save-docs` 의 분류 저장과 보완 관계입니다.
 
 ---
 
@@ -114,7 +115,7 @@ llm-rules Claude Code 에디션이 설치하는 **10개 슬래시 커맨드**입
 슬래시 커맨드는 **명시적 호출**이고, 훅은 **자동 실행**입니다. 둘은 같은 컨벤션을 공유하지만 시점이 다릅니다.
 
 - `lint-edit.sh`(PostToolUse): 편집 직후 `useCallback`/`useMemo`·백엔드 `throw new Error`·`process.env` 직접접근을 즉시 차단(HARD), `function` 키워드·코드 주석·잘못된 default export·`HACK`/`FIXME`/`@ts-ignore`·sanitize 없는 `dangerouslySetInnerHTML` 를 경고(SOFT)합니다. → `audit-conventions` 의 자동화 부분.
-- `scan-secrets.sh`(PreToolUse)·`session-context.sh`(SessionStart): 시크릿 편집을 차단하고, 세션 시작·재개 시 컨벤션 요약과 `docs/PROCESS.md`를 주입합니다.
+- `scan-secrets.sh`(PreToolUse)·`session-context.sh`(SessionStart): 시크릿 편집을 차단하고, 세션 시작·재개 시 workflow 선택 게이트, 컨벤션 요약과 `docs/PROCESS.md`를 주입합니다.
 - `/llm-rules:workflow`, `verification-worker`, `edge-case-verification-worker`: 위험비례 주 검증을 한 번 수행하고 꼭 필요한 애매성만 최소 비용으로 판정합니다.
 
 세부 동작은 `docs/claudecode/hooks.md` 와 `settings.json` 을, 컨벤션 본문은 `docs/convention/*.md` 를 참고하세요.

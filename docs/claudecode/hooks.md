@@ -93,7 +93,7 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 1. **`docs/` 디렉토리를 보장**(`mkdir -p docs`) — comments.md §3 / ai-process.md §1.
 2. **컨벤션 문서 위치를 자동 감지**해 `세부:` 라인에 반영합니다. 우선순위: `LLM_RULES_CONVENTION_DIR` 환경변수 → 프로젝트 `$CLAUDE_PROJECT_DIR/.claude/convention` (미설정 시 cwd 기준) → 글로벌 `~/.claude/convention`. 각 후보는 `index.md` 존재 여부로 검증하며, 어디에도 없으면 경로 대신 **미설치 안내**를 주입합니다.
 3. 컨벤션 핵심 요약을 컨텍스트로 만듭니다. **요약 문구의 단일 출처는 스크립트(`session-context.sh`)의 주입 텍스트**이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다. (주제: 함수·타입·주석·매직넘버/이모지·export·FSD/쿼리·커밋·시크릿·검증·질문 방식)
-4. **작업 개시 프로토콜**(도구 사용 작업은 workflow로 분해, Fable high 메인과 Sonnet high 작업자 역할·소유권·상세 위임 계약, 독립 작업 병렬/의존 작업 직렬, `PROCESS.md` 갱신, 공식 문서 확인, 범위 변경만 한 번에 질문)을 덧붙입니다. 원문의 단일 출처는 스크립트입니다.
+4. **작업 개시 프로토콜**(새 도구 사용 작업과 세션·resume·clear·compact·handoff·PROCESS 재개마다 workflow 사용 여부를 한 번 질문하고 답을 기다림, 사용 선택 시 Fable high 메인과 Sonnet high 작업자 역할·소유권·상세 위임 계약, 독립 작업 병렬/의존 작업 직렬, 비사용 시 main 직접 수행, `PROCESS.md` 갱신, 공식 문서 확인)을 덧붙입니다. 원문의 단일 출처는 스크립트입니다.
 5. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
 6. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
 

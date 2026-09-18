@@ -6,12 +6,11 @@ allowed-tools: Read, Write, Edit, Glob, Bash
 
 ai-process 의 "문서 기반 작업" 원칙에 따라 `docs/PROCESS.md` 작업 체크리스트를 유지·갱신합니다. 한국어, 존댓말, 간결하게 진행하세요.
 
-현재 PROCESS.md 상태:
-!`cat docs/PROCESS.md 2>/dev/null || echo "(docs/PROCESS.md 없음)"`
+현재 실행 작업의 workflow 선택이 아직 없으면 파일을 읽거나 갱신하기 전에 “이번 작업을 다중 에이전트 workflow로 진행할까요? A. 사용 / B. 사용하지 않음”을 한 번 묻고 답을 기다리세요. 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 문서에 남은 이전 선택을 승계하지 않습니다.
 
 인자(이번에 갱신/추가할 작업, 비어 있을 수 있음): $ARGUMENTS
 
-다음 순서로 수행하세요.
+선택을 받은 뒤 다음 순서로 수행하세요.
 
 ## 1. docs/ 보장
 
@@ -19,7 +18,7 @@ ai-process 의 "문서 기반 작업" 원칙에 따라 `docs/PROCESS.md` 작업 
 
 ## 2. 현재 체크리스트 상태 갱신 (ai-process §2)
 
-- 위에 출력된 `docs/PROCESS.md` 를 읽고, 진행 중인 작업의 체크리스트 상태를 **실제 진척에 맞게** 갱신합니다.
+- workflow 선택을 받은 뒤 `docs/PROCESS.md` 를 읽고, 진행 중인 작업의 체크리스트 상태를 **실제 진척에 맞게** 갱신합니다.
   - 끝난 항목은 `- [x]`, 진행 중/미착수는 `- [ ]` 로 표시합니다.
   - 각 항목 뒤에 한 줄 상세(참조: 무엇을 했는지/다음에 뭘 하는지)를 붙입니다.
 - **체크리스트에 없는 행동은 추가하지 않습니다.** 범위를 벗어나는 작업이 발견되면 임의로 넣지 말고 사용자에게 알립니다. (ai-process §2·§3)

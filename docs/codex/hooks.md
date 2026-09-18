@@ -6,7 +6,7 @@
 | -------------------- | -------------------------- | -------------------------------------------------------------------- |
 | `scan-secrets.sh`    | `PreToolUse(apply_patch)`  | 새로 추가되는 코드의 고신뢰 시크릿 패턴 차단                       |
 | `lint-edit.sh`       | `PostToolUse(apply_patch)` | 변경 TS·JS에 Prettier 적용 후 명백한 위반은 재작업, 휴리스틱은 경고 |
-| `session-context.sh` | `SessionStart`             | 컨벤션 요약, 작업 개시 프로토콜, `docs/PROCESS.md` 앞부분 주입      |
+| `session-context.sh` | `SessionStart`             | workflow 선택 질문, 컨벤션 요약, `docs/PROCESS.md` 앞부분 주입      |
 
 ## Claude Hook과의 차이
 

@@ -5,6 +5,19 @@
 
 ---
 
+## 작업: 세션 시작·재개 시 workflow 사용 여부 1회 확인 (완료)
+
+사용자 요청 — 모든 도구 작업에 workflow를 강제하지 않고, 새 세션 시작과 resume·clear·compact·handoff/process 기반 재개 때 첫 실행 전에 workflow 사용 여부를 한 번 확인하도록 공통 규칙과 양 플랫폼 자산을 동기화한다.
+
+- [x] 강제 지점 조사 — 공통 코어·요약·Codex/Claude workflow 자산·SessionStart hook·process·prepare-new·안내 문서 확인
+- [x] 공통 계약 수정 — 작업별·세션/재개 경계별 1회 선택, 명시 선택 시 중복 질문 생략, 미응답 시 실행 대기, 비사용 시 main 직접 수행 명문화
+- [x] Codex 자산 동기화 — workflow/process/prepare-new Skills와 SessionStart hook에 선택 게이트 반영
+- [x] Claude Code 자산 동기화 — workflow/process/prepare-new Commands와 SessionStart hook에 선택 게이트 반영, process 선행 파일 읽기 제거
+- [x] 사용자 문서·결정 기록 동기화 — Codex/Claude 안내와 `docs/acknowledge/2026-09-18-workflow-selection-gate.md` 갱신
+- [x] 최소 검증 — 구 강제 표현 잔존 0, 양쪽 hook `bash -n`·실제 JSON 질문 포함 확인, `git diff --check` 통과, 설치기 테스트 2개·69 assertion 통과. `bun run typecheck`는 로컬 의존성 미설치로 `tsc: command not found`여서 미실행(문서·셸 변경 범위와 무관)
+
+---
+
 ## 작업: 자율 Git·비용 효율 검증·응답 규칙 고도화 (완료)
 
 사용자 요청 — Codex와 Claude Code에서 일반 commit·push의 승인·차단기를 완전히 제거하고, 검증은 위험에 비례해 한 번만 수행하며, 애매한 추가 검사는 최저비용 모델의 xhigh로 제한한다. 과도하게 특수한 엣지케이스는 실행하지 않고 `docs/`에 테스트 부채로 축적한다. 응답은 다음 행동·현재 상태·구체적 결과가 처음과 끝에서 드러나도록 10개 작성 규칙과 6개 예외를 반영한다.

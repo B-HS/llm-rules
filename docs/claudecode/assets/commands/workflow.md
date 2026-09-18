@@ -4,7 +4,7 @@ argument-hint: '[작업 설명 또는 현재 사용자 요청]'
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
-도구를 사용하는 실행 작업을 Claude Code subagent workflow로 진행합니다. 단순 설명·대화 답변은 이 커맨드 대상이 아닙니다. Fable high 메인은 요구사항·분해·의존 관리·통합·최종 판정·Git을 소유하고, 구현·주 검증·리서치는 Sonnet high 서브에이전트에 위임합니다. 주 검증 뒤 실질적인 애매성만 Haiku xhigh 서브에이전트가 가장 작은 보조 검사로 판정합니다.
+이 커맨드의 직접 호출은 현재 작업에서 workflow **사용**을 선택한 것으로 간주하므로 사용 여부를 다시 묻지 않습니다. 도구를 사용하는 실행 작업을 Claude Code subagent workflow로 진행합니다. 단순 설명·대화 답변은 이 커맨드 대상이 아닙니다. Fable high 메인은 요구사항·분해·의존 관리·통합·최종 판정·Git을 소유하고, 구현·주 검증·리서치는 Sonnet high 서브에이전트에 위임합니다. 주 검증 뒤 실질적인 애매성만 Haiku xhigh 서브에이전트가 가장 작은 보조 검사로 판정합니다.
 
 작업 요청: `$ARGUMENTS`
 

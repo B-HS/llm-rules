@@ -1,11 +1,13 @@
 ---
 name: llm-rules-subagent-workflow
-description: 모든 tool-using 실행 작업에서 Codex Subagent workflow로 요구사항 분해, 상세 위임, 병렬·직렬 조율, 통합과 자동 Git을 수행할 때 사용합니다. 단순 대화 답변에는 사용하지 않습니다.
+description: 사용자가 현재 실행 작업에 Codex Subagent workflow 사용을 선택했거나 이 Skill을 직접 호출했을 때 요구사항 분해, 상세 위임, 병렬·직렬 조율, 통합과 자동 Git을 수행합니다.
 ---
 
 # Codex Subagent workflow
 
-tool을 사용해 구현, 조사, 검증, 문서화, 설치 또는 배포를 수행하는 작업은 시작 전에 이 Skill을 적용합니다. 단순한 대화 답변과 tool이 필요 없는 설명에는 강제하지 않습니다.
+새 tool-using 실행 작업은 먼저 사용자에게 workflow 사용 여부를 한 번 묻습니다. 사용자가 **사용**을 선택하거나 이 Skill을 직접 호출한 경우에만 적용합니다. **사용하지 않음**을 선택하면 main이 직접 수행하며 이 Skill을 적용하지 않습니다. 새 세션·resume·clear·compact·handoff·`PROCESS.md` 재개에서는 이전 선택을 승계하지 않고 다시 묻습니다.
+
+이 Skill의 직접 호출은 현재 작업의 **사용** 선택으로 간주하므로 중복 질문하지 않습니다. 단순한 대화 답변과 tool이 필요 없는 설명에는 선택 질문도 이 Skill도 적용하지 않습니다.
 
 ## 역할과 모델
 

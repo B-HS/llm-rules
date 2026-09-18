@@ -43,7 +43,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 ## 확인
 
-새 Codex 세션에서 `/hooks`로 편집·세션 hook을 검토하고 신뢰 승인합니다. 일반 commit·push에는 llm-rules hook이나 추가 승인이 없으며 Execpolicy가 allow합니다. 모든 force push는 파괴적 예외로 계속 금지합니다. `/skills` 또는 `$llm-rules-...`로 Skills를 확인하고, tool을 사용하는 실행 작업은 `$llm-rules-subagent-workflow`를 적용해 Custom Agent로 위임합니다.
+새 Codex 세션에서 `/hooks`로 편집·세션 hook을 검토하고 신뢰 승인합니다. SessionStart hook은 새 실행 작업 전에 workflow 사용 여부를 한 번 묻도록 주입하며, 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 이전 선택을 승계하지 않습니다. 사용자가 선택하거나 `$llm-rules-subagent-workflow`를 직접 호출하면 Custom Agent로 위임하고, 선택하지 않으면 main이 직접 수행합니다. 일반 commit·push에는 llm-rules hook이나 추가 승인이 없으며 Execpolicy가 allow합니다. 모든 force push는 파괴적 예외로 계속 금지합니다.
 
 ```bash
 codex execpolicy check --pretty --rules ~/.codex/rules/llm-rules.rules -- git push --force origin main
