@@ -107,13 +107,11 @@ end = "<!-- END: llm-rules -->"
 current_hook_scripts = ["scan-secrets.sh", "lint-edit.sh", "session-context.sh"]
 retired_hook_scripts = ["reinject-rules.sh", "verify-on-stop.sh", "guard-commit.sh", "guard-push.sh"]
 managed_hook_scripts = current_hook_scripts + retired_hook_scripts
-root_config_keys = ["model", "model_reasoning_effort"]
 agent_config_keys = ["enabled", "default_subagent_model", "default_subagent_reasoning_effort", "max_concurrent_threads_per_session"]
-root_config_lines = ["model = \"gpt-5.6-sol\"", "model_reasoning_effort = \"high\""]
 agent_config_lines = [
     "enabled = true",
     "default_subagent_model = \"gpt-5.6-terra\"",
-    "default_subagent_reasoning_effort = \"high\"",
+    "default_subagent_reasoning_effort = \"medium\"",
     "max_concurrent_threads_per_session = 4",
 ]
 
@@ -166,6 +164,18 @@ def prune_managed_hooks(entry):
 def remove_toml_assignments(source, keys):
     return "\n".join(line for line in source.split("\n") if not any(re.match(r"^\s*" + re.escape(key) + r"\s*=", line) for key in keys))
 
+def remove_legacy_managed_main_defaults(source):
+    lines = source.split("\n")
+    has_managed_model = any(re.match(r'^\s*model\s*=\s*"gpt-5\.6-sol"\s*$', line) for line in lines)
+    has_managed_effort = any(re.match(r'^\s*model_reasoning_effort\s*=\s*"high"\s*$', line) for line in lines)
+    if not has_managed_model or not has_managed_effort:
+        return source
+    return "\n".join(
+        line for line in lines
+        if not re.match(r'^\s*model\s*=\s*"gpt-5\.6-sol"\s*$', line)
+        and not re.match(r'^\s*model_reasoning_effort\s*=\s*"high"\s*$', line)
+    )
+
 def is_table_header(line):
     return re.match(r"^\s*(?:\[[^\]\r\n]+\]|\[\[[^\]\r\n]+\]\])\s*(?:#.*)?$", line) is not None
 
@@ -175,21 +185,20 @@ def is_agents_header(line):
 def merge_managed_config(original):
     lines = original.splitlines(keepends=True)
     first_table = next((index for index, line in enumerate(lines) if is_table_header(line)), len(lines))
-    root = remove_toml_assignments("".join(lines[:first_table]), root_config_keys)
+    root = remove_legacy_managed_main_defaults("".join(lines[:first_table])).strip()
     tables = "".join(lines[first_table:])
-    root_with_managed_keys = ("\n".join(root_config_lines) + "\n" + root.lstrip()).rstrip()
     table_lines = tables.splitlines(keepends=True)
     agent_index = next((index for index, line in enumerate(table_lines) if is_agents_header(line)), None)
     if agent_index is None:
-        suffix = "\n\n" + tables.strip() if tables else ""
-        return root_with_managed_keys + suffix + "\n\n[agents]\n" + "\n".join(agent_config_lines) + "\n"
+        prefix = root + ("\n\n" if root and tables else "") + tables.strip()
+        return prefix + ("\n\n" if prefix else "") + "[agents]\n" + "\n".join(agent_config_lines) + "\n"
     agent_end = next((index for index in range(agent_index + 1, len(table_lines)) if is_table_header(table_lines[index])), len(table_lines))
     before_agent = "".join(table_lines[:agent_index]).rstrip()
     agent_header = table_lines[agent_index].strip()
     agent_body = remove_toml_assignments("".join(table_lines[agent_index + 1:agent_end]), agent_config_keys).strip()
     after_agent = "".join(table_lines[agent_end:]).strip()
     agent_section = "\n".join(value for value in [agent_header, "\n".join(agent_config_lines), agent_body] if value)
-    prefix = root_with_managed_keys + "\n\n" + (before_agent + "\n" if before_agent else "")
+    prefix = root + ("\n\n" if root else "") + (before_agent + "\n" if before_agent else "")
     return prefix + agent_section + ("\n" + after_agent if after_agent else "") + "\n"
 
 def install_config():
@@ -212,7 +221,7 @@ def install_config():
     if updated != original:
         with open(config_path, "w", encoding="utf-8") as file:
             file.write(updated)
-    print("config 설치 완료: 관리 main·subagent 기본값 병합")
+    print("config 설치 완료: workflow agent 관리 키 병합")
 
 def install_hooks():
     source_hooks = os.path.join(assets_dir, "hooks")

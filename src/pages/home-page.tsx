@@ -12,8 +12,8 @@ const CLAUDE_INSTALL_COMMANDS = [
 const SUPPORT_LAYERS = [
     { label: '기본 지침', codex: 'AGENTS.md', claude: 'CLAUDE.md' },
     { label: '생명주기', codex: 'Hooks', claude: 'Hooks' },
-    { label: '오케스트레이터', codex: 'Sol · high', claude: 'Fable · high' },
-    { label: '하위 작업', codex: 'Terra/Luna high · Luna xhigh', claude: 'Sonnet high · Haiku xhigh' },
+    { label: '오케스트레이터', codex: 'Sol high / Terra medium', claude: 'Fable · high' },
+    { label: '하위 작업', codex: 'Terra medium/high · Luna low/high', claude: 'Sonnet high · Haiku xhigh' },
     { label: '워크플로', codex: 'Subagent workflow', claude: 'Workflow command' },
     { label: '명령 정책', codex: 'Execpolicy Rules', claude: 'Permissions' },
     { label: '응답 규칙', codex: 'AGENTS.md', claude: 'Output Style' },
@@ -70,7 +70,7 @@ export const HomePage: FC = () => (
                         <span className='rounded-full bg-foreground px-2.5 py-1 text-xs font-medium text-background'>1 command</span>
                     </div>
                     <p className='mt-4 text-sm leading-6 text-muted-foreground'>
-                        Sol 오케스트레이터부터 Hooks, Subagent workflow, Terra/Luna Custom Agents, 무승인 Git Rules까지 한 번에 설치합니다.
+                        작업 난도별 Sol/Terra 오케스트레이션부터 Hooks, Subagent workflow, Terra/Luna Custom Agents, 무승인 Git Rules까지 한 번에 설치합니다.
                     </p>
                     <pre className='mt-5 overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-xs leading-6'>
                         <code className='whitespace-pre-wrap break-all'>{CODEX_INSTALL_COMMAND}</code>

@@ -5,16 +5,17 @@ description: 사용자가 현재 실행 작업에 Codex Subagent workflow 사용
 
 # Codex Subagent workflow
 
-새 tool-using 실행 작업은 먼저 사용자에게 workflow 사용 여부를 한 번 묻습니다. 사용자가 **사용**을 선택하거나 이 Skill을 직접 호출한 경우에만 적용합니다. **사용하지 않음**을 선택하면 main이 직접 수행하며 이 Skill을 적용하지 않습니다. 새 세션·resume·clear·compact·handoff·`PROCESS.md` 재개에서는 이전 선택을 승계하지 않고 다시 묻습니다.
+새 tool-using 실행 작업은 먼저 사용자에게 workflow 사용 여부를 한 번 묻습니다. 사용자가 **사용**을 선택하거나 이 Skill을 직접 호출한 경우에만 적용합니다. **사용하지 않음**을 선택하면 main이 직접 수행하며 이 Skill을 적용하지 않습니다. 새 세션·resume·clear·compact·handoff·`PROCESS.md`·prepare-new 재개에서는 이전 선택을 승계하지 않고 다시 묻습니다. 다른 환경의 새 chat/task, reopen/reset, compact/summarize가 같은 의미면 같은 경계로 취급합니다.
 
 이 Skill의 직접 호출은 현재 작업의 **사용** 선택으로 간주하므로 중복 질문하지 않습니다. 단순한 대화 답변과 tool이 필요 없는 설명에는 선택 질문도 이 Skill도 적용하지 않습니다.
 
 ## 역할과 모델
 
-- main orchestrator는 요구사항 확인, 작업 분해, 파일 소유권 결정, 결과·검증 증거 통합, Git을 소유합니다. 기본 모델은 `gpt-5.6-sol`, reasoning effort는 `high`입니다.
-- 복합 구현, 의미론적 검토, 공식 문서 조사는 `implementation_worker`, `research_worker` 또는 `gpt-5.6-terra` high에 배정합니다.
-- 범위가 좁고 반복 가능한 주 검증은 `verification_worker` 또는 `gpt-5.6-luna` high에 배정합니다.
-- 주 검증 후에도 결과를 바꿀 실질적 모호성이 남을 때만 `edge_case_verification_worker` 또는 `gpt-5.6-luna` xhigh에 가장 작은 추가 판정을 배정합니다.
+- main orchestrator는 요구사항 확인, 작업 분해, 파일 소유권 결정, 결과·검증 증거 통합, Git을 소유합니다. 이 Skill은 현재 세션 모델을 강제 교체하지 않습니다. 새 workflow를 시작할 때 모호한 다단계·고위험 통합은 `gpt-5.6-sol` high, 범위가 분명한 조율은 `gpt-5.6-terra` medium을 선택합니다.
+- 공식 문서 조사·대규모 읽기·일반 구현은 `gpt-5.6-terra` medium, 복잡한 구현·보안·의미 판단은 Terra high에 명시 배정합니다.
+- 범위가 좁고 반복 가능한 검색·분류·기계 검증은 `gpt-5.6-luna` low, 일반 검증은 Luna medium에 명시 배정합니다.
+- 주 검증 후에도 결과를 바꿀 실질적 모호성이 남을 때만 `edge_case_verification_worker` 또는 Luna high에 가장 작은 추가 판정을 배정합니다. xhigh 이상은 특히 어려운 추론이라는 근거를 delegation packet에 적을 때만 사용합니다.
+- subagent를 시작할 때 모델과 reasoning effort를 둘 다 명시합니다. 작업 성격과 다른 상위 세션 설정을 묵시적으로 상속하지 않습니다.
 - subagent는 Git staging, commit, push, rebase, merge를 수행하지 않습니다.
 
 ## 작업 분해와 순서

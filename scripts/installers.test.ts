@@ -8,6 +8,8 @@ type JsonRecord = Record<string, unknown>
 const REPOSITORY_ROOT = resolve(import.meta.dir, '..')
 const CODEX_INSTALLER = join(REPOSITORY_ROOT, 'scripts', 'install-codex.ts')
 const CLAUDE_INSTALLER = join(REPOSITORY_ROOT, 'scripts', 'install-claude-code.ts')
+const CODEX_SESSION_HOOK = join(REPOSITORY_ROOT, 'docs', 'codex', 'assets', 'hooks', 'session-context.sh')
+const CLAUDE_SESSION_HOOK = join(REPOSITORY_ROOT, 'docs', 'claudecode', 'assets', 'hooks', 'session-context.sh')
 const RETIRED_HOOKS = ['guard-commit.sh', 'guard-push.sh', 'reinject-rules.sh', 'verify-on-stop.sh']
 const HOOK_MARKER = '/hooks/llm-rules/'
 const USER_HOOK_NAME = 'user-hook.sh'
@@ -55,6 +57,30 @@ const runInstaller = async (installer: string, target: string, items: string[]) 
     expect(stdout.length).toBeGreaterThan(0)
     expect(typeof stderr).toBe('string')
     return { stdout, stderr }
+}
+
+const runSessionHook = async (hook: string, cwd: string, source = 'resume') => {
+    const processResult = Bun.spawn({
+        cmd: ['bash', hook],
+        cwd: REPOSITORY_ROOT,
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+    })
+    processResult.stdin.write(JSON.stringify({ cwd, source }))
+    processResult.stdin.end()
+    const [exitCode, stdout, stderr] = await Promise.all([
+        processResult.exited,
+        new Response(processResult.stdout).text(),
+        new Response(processResult.stderr).text(),
+    ])
+    expect(exitCode).toBe(0)
+    expect(stderr).toBe('')
+    const output = readJsonRecord(stdout)
+    const hookOutput = getRecord(output, 'hookSpecificOutput')
+    const context = hookOutput.additionalContext
+    if (typeof context !== 'string') throw new Error('additionalContext must be a string')
+    return context
 }
 
 const createTempTarget = async (name: string) => {
@@ -197,13 +223,13 @@ describe('Codex 로컬 설치기', () => {
             const config = Bun.TOML.parse(configText)
             const hooks = readJsonRecord(hooksText)
 
-            expect(config.model).toBe('gpt-5.6-sol')
-            expect(config.model_reasoning_effort).toBe('high')
+            expect(config.model).toBe('legacy-model')
+            expect(config.model_reasoning_effort).toBe('low')
             expect(isRecord(config.agents)).toBe(true)
             const agents = getRecord(config, 'agents')
             expect(agents.enabled).toBe(true)
             expect(agents.default_subagent_model).toBe('gpt-5.6-terra')
-            expect(agents.default_subagent_reasoning_effort).toBe('high')
+            expect(agents.default_subagent_reasoning_effort).toBe('medium')
             expect(agents.max_concurrent_threads_per_session).toBe(4)
             expect(configText).toContain('custom_value = "keep"')
             expect(configText).toContain('[mcp_servers.sample]')
@@ -230,6 +256,74 @@ describe('Codex 로컬 설치기', () => {
             expect(await readFileText(configPath)).toBe(configText)
             expect(await readFileText(hooksPath)).toBe(hooksText)
             expect(await readFileText(rulesPath)).toBe(rulesText)
+        } finally {
+            await rm(root, { recursive: true, force: true })
+        }
+    })
+
+    test('이전 llm-rules의 main Sol high 고정만 제거한다', async () => {
+        const { root, target } = await createTempTarget('codex-main-migration')
+        try {
+            const codexDir = join(target, '.codex')
+            await mkdir(codexDir, { recursive: true })
+            await writeFile(
+                join(codexDir, 'config.toml'),
+                `model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+custom_value = "keep"
+`,
+            )
+
+            await runInstaller(CODEX_INSTALLER, target, ['--config'])
+            const config = Bun.TOML.parse(await readFileText(join(codexDir, 'config.toml')))
+            expect(config.model).toBeUndefined()
+            expect(config.model_reasoning_effort).toBeUndefined()
+            expect(config.custom_value).toBe('keep')
+            expect(getRecord(config, 'agents').default_subagent_reasoning_effort).toBe('medium')
+        } finally {
+            await rm(root, { recursive: true, force: true })
+        }
+    })
+})
+
+describe('SessionStart 경량 컨텍스트', () => {
+    test('입력 cwd의 첫 활성 작업만 양 플랫폼에 주입한다', async () => {
+        const { root, target } = await createTempTarget('session-hook-target')
+        try {
+            await mkdir(join(target, 'docs'), { recursive: true })
+            await writeFile(
+                join(target, 'docs', 'PROCESS.md'),
+                `# PROCESS
+
+## 작업: 완료 이력 (완료)
+
+- [x] 오래된 완료 항목
+
+## 작업: 보류 작업 (보류)
+
+- [ ] 보류된 미완료 항목
+
+## 작업: 현재 작업 (진행 중)
+
+- [x] 조사 완료
+- [ ] 구현 진행
+
+## 작업: 다음 작업
+
+- [ ] 아직 시작하지 않음
+`,
+            )
+
+            for (const hook of [CODEX_SESSION_HOOK, CLAUDE_SESSION_HOOK]) {
+                const context = await runSessionHook(hook, target)
+                expect(context).toContain('[llm-rules 세션 경계: resume]')
+                expect(context).toContain('## 작업: 현재 작업 (진행 중)')
+                expect(context).toContain('- [ ] 구현 진행')
+                expect(context).not.toContain('오래된 완료 항목')
+                expect(context).not.toContain('보류된 미완료 항목')
+                expect(context).not.toContain('아직 시작하지 않음')
+                expect(context.length).toBeLessThan(4000)
+            }
         } finally {
             await rm(root, { recursive: true, force: true })
         }

@@ -36,7 +36,7 @@
                         "command": "bash \"{{HOOKS_DIR}}/session-context.sh\"",
                         "timeout": 15,
                         "statusMessage": "llm-rules 컨텍스트 로드",
-                        "additionalContextLimit": 6000
+                        "additionalContextLimit": 4000
                     }
                 ]
             }

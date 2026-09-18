@@ -7,7 +7,7 @@ description: 2파일·2스텝 이상 작업의 `docs/PROCESS.md` 체크리스트
 
 아래 1번의 선택을 받은 뒤 `docs/convention/ai-process.md`를 읽고 다음을 수행합니다.
 
-1. 현재 실행 작업의 workflow 선택이 아직 없으면 “이번 작업을 다중 에이전트 workflow로 진행할까요? A. 사용 / B. 사용하지 않음”을 한 번 묻고 답을 기다립니다. 새 세션·재개에서는 `PROCESS.md`에 남은 이전 선택을 승계하지 않습니다.
+1. 현재 실행 작업의 workflow 선택이 아직 없으면 “이번 작업을 다중 에이전트 workflow로 진행할까요? A. 사용 / B. 사용하지 않음”을 한 번 묻고 답을 기다립니다. 새 세션·resume·clear·compact·handoff·PROCESS·prepare-new 재개에서는 문서에 남은 이전 선택을 승계하지 않습니다.
 2. `docs/`가 없으면 생성합니다.
 3. 기존 `docs/PROCESS.md`를 읽고 현재 작업의 완료 항목만 `[x]`로 갱신합니다.
 4. 새 작업이면 작업명, Markdown 체크리스트, 각 항목의 상세·참조, 기준 문서를 기록합니다.

@@ -14,7 +14,7 @@
 | `hook:scan-secrets` | PreToolUse(Edit\|Write\|MultiEdit) | 시크릿 패턴이면 `exit 2` 로 편집 **차단** |
 | `hook:lint-edit (HARD)` | PostToolUse(Edit\|Write\|MultiEdit) | `{"decision":"block"}` 로 LLM 에 **수정 요구** |
 | `hook:lint-edit (SOFT)` | PostToolUse(Edit\|Write\|MultiEdit) | `{"systemMessage":...}` 로 **경고만**(차단 안 함) |
-| `hook:session-context` | SessionStart | workflow 선택 게이트 + 컨벤션 요약 + `docs/PROCESS.md` 주입, `docs/` 보장 |
+| `hook:session-context` | SessionStart | workflow 선택 게이트 + 규칙 포인터 + `docs/PROCESS.md` 첫 활성 작업 주입 |
 | `permission` | settings.json `allow`/`ask`/`deny` | 도구 호출을 **자동허용 / 확인질문 / 차단** |
 | `cmd:<name>` | 슬래시 커맨드 `/llm-rules:<name>` | 사용자가 명시 호출하는 점검·기록 |
 | `agent:<name>` | Sonnet high 또는 Haiku xhigh 서브에이전트 | 구현·주 검증·리서치·리뷰 또는 최소 애매성 판정 |
@@ -37,7 +37,7 @@
 
 | 규칙 (요약 항목) | → 메커니즘 | 등급 |
 |---|---|---|
-| 자주 어기는 핵심 규칙 요약 상시 인지 | `hook:session-context`(시작/재개 시 핵심 6줄 주입) | 결정론 졸업(주입은 기계적) |
+| 세션 경계의 핵심 실행 계약 상시 인지 | `hook:session-context`(선택 게이트·규칙 포인터·활성 작업만 주입) | 결정론 졸업(주입은 기계적) |
 | 긴 컨텍스트에서도 컨벤션 유지 | `hook:session-context`(시작/재개 시 workflow 선택 게이트·계약 주입), `cmd:workflow` | prose 유지(선택·작업 분해·통합은 메인 책임) |
 | 적용 우선순위(COMMON 전제 + FE/BE) | `prose` | prose 유지 |
 | 문서 라우팅·디렉토리 구조 | `prose` | prose 유지 |
@@ -52,9 +52,9 @@
 | §0.1 이모지·아스키아트 금지(응답·코드·UI·커밋) | output-style + `cmd:workflow` | prose 유지 |
 | §6.1 실제 파일 > 메모리·문서 우선 | `prose` | prose 유지 |
 | §6.8 dead code — 내 변경분 미사용 코드 제거·주석 보관 금지 | `agent:convention-reviewer` | prose 유지 |
-| §1·§14 모든 작업은 `docs/` 기반, `docs/` 보장 | `hook:session-context`(`mkdir -p docs`), `cmd:save-docs` | 결정론 졸업(디렉토리 보장) / 나머지 prose |
+| §1·§14 모든 작업은 `docs/` 기반, 필요 시 `docs/` 보장 | `cmd:process`, `cmd:save-docs`, `cmd:workflow` | prose 유지(세션 hook은 읽기 전용) |
 | §1.2 workflow 사용 여부 1회 확인·선택 시 다중 에이전트 workflow | `cmd:workflow`, worker 4종, reviewer 7종, `hook:session-context` | prose 유지(선택 대기·메인 오케스트레이션·통합 판단) |
-| §2 `docs/PROCESS.md` 체크리스트 운용 | `cmd:process`, `hook:session-context`(PROCESS.md 앞부분 주입), `cmd:workflow` | 경고만(주입은 결정론, 작성은 사람/LLM) |
+| §2 `docs/PROCESS.md` 체크리스트 운용 | `cmd:process`, `hook:session-context`(첫 활성 작업만 주입), `cmd:workflow` | 경고만(주입은 결정론, 작성은 사람/LLM) |
 | §3 멈춤 — 의사결정 필요 시 확인 | `prose`, `hook:session-context`(작업 개시 프로토콜), `cmd:workflow` | prose 유지(주입으로 보강) |
 | §3.1 한 번에 모든 경우의 수를 묻기 | `prose` | prose 유지 |
 | §6.1 코드베이스 먼저 파악 | `prose` | prose 유지 |
@@ -64,11 +64,11 @@
 | §6.6 의존성 최신·충돌 시 확인 | `permission`(`npm install`/`pnpm add`/`yarn add` → `ask`) | 결정론 졸업(설치는 확인질문) |
 | §6.7 프로젝트 환경 안에서 해결(예: Drizzle 있으면 raw SQL 금지) | `agent:backend-convention-reviewer` | prose 유지(에이전트 점검) |
 | §6.8 최소 변경(minimal diff) | `prose` | prose 유지 |
-| §7 신규 프로젝트 스택·환경 먼저 합의 | `prose` + `hook:session-context`(작업 개시 프로토콜 2 — 스택 장단점 요약 합의) | prose 유지(주입으로 보강) |
+| §7 신규 프로젝트 스택·환경 먼저 합의 | `prose` + `cmd:workflow` | prose 유지 |
 | §8·§8.1 위험비례 최소 검증·성공 결과 재사용·테스트 부채 | `agent:verification-worker`, `agent:edge-case-verification-worker`, `cmd:verify`, `cmd:workflow` | prose 유지(검증 범위·애매성 판정은 작업 계약) |
 | §1.1 세션 시작 시퀀스(PROCESS.md 확인 후 workflow 선택 질문) | `hook:session-context` — 타 에이전트는 §1.1 prose 로 직접 수행 | 결정론 졸업(주입은 기계적, 답 대기는 prose) |
 | §9 결과물 분류 저장(memory/history/bug/acknowledge/feedback/QA) | `cmd:save-docs`, `cmd:log-feedback`, `cmd:workflow` | prose 유지(기록은 사람 명령) |
-| §10 안티패턴(절대 금지) 상시 인지 | `hook:session-context`, `cmd:workflow` | prose 유지 |
+| §10 안티패턴(절대 금지) 상시 인지 | `prose`, `cmd:workflow`, 관련 편집 hook | prose 유지 |
 
 ---
 
@@ -102,7 +102,7 @@
 |---|---|---|
 | §1 코드 주석 금지(`//`, `/* */`) | `hook:lint-edit (SOFT)`(주석 패턴 검출, `/**` JSDoc 있으면 제외) | 경고만(문자열·URL `//` 오탐 때문에 SOFT) |
 | §2 유일 예외 JSDoc(영어) | `hook:lint-edit (SOFT)`(JSDoc `/**` 은 주석 경고에서 면제) | 경고만 |
-| §3 설명은 `docs/` 로 | `hook:session-context`(`docs/` 보장), `cmd:save-docs` | 결정론 졸업(디렉토리 보장) / 나머지 prose |
+| §3 설명은 `docs/` 로 | `cmd:process`, `cmd:save-docs` | prose 유지(세션 hook은 읽기 전용) |
 
 ---
 

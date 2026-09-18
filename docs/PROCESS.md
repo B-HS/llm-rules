@@ -5,6 +5,20 @@
 
 ---
 
+## 작업: workflow 규칙·모델 라우팅·초기 컨텍스트 경량화 (완료)
+
+사용자 요청 — 현재 상태를 `v1` 브랜치로 보존하고, 일반 commit·push 규칙은 변경하지 않은 채 workflow 선택 게이트의 재개·플랫폼 호환성을 보강하고 Codex 모델을 작업 난도에 따라 배정하며 SessionStart 초기 주입량을 줄인다.
+
+- [x] **1. 기준선 보존·공식 기준 확인** — `v1` 브랜치의 `9adeed4`에 현재 상태를 스냅샷하고 `codex/rules-v2`에서 작업 시작. OpenAI Docs의 SessionStart source와 Sol·Terra·Luna/effort 선택 기준 확인
+- [x] **2. 공통 계약·모델 라우팅 수정** — main 설정 보존·이전 Sol high 쌍 마이그레이션, 역할별 Terra/Luna medium/high 기본값과 명시적 spawn 라우팅을 공통 문서·Skill·설정·양 설치기에 반영
+- [x] **3. 초기 컨텍스트 경량화** — 양 플랫폼 hook이 stdin `cwd`를 사용하고, 핵심 계약·guardrail·규칙 포인터와 첫 활성 작업의 미완료 이름 최대 4개만 주입하도록 변경
+- [x] **4. 플랫폼 자산·안내 동기화** — 네이티브 source와 semantic handoff/process/prepare-new 경계를 분리하고 Cursor·Copilot·Windsurf·opencode·pi의 동등 의미 경계를 공통 코어·전문·안내에 반영
+- [x] **5. 회귀 검증** — `bun test` 4개·94 assertion, 양 hook shell·JSON·agent/config TOML·원격 설치기 embedded Python 문법, installer dry-run, `git diff --check` 통과. Git 전문·Rules·Claude permissions/workflow·코어 Git 섹션은 `v1`과 동일. raw SessionStart context는 Codex 26,817B→1,951B, Claude 28,134B→1,714B. `bun run typecheck`는 의존성 미설치로 `tsc: command not found`
+
+기준 문서: `docs/convention/ai-process.md` · `docs/agents-core.md` · OpenAI Docs Models·Subagents·Hooks · 양 플랫폼 workflow·SessionStart 자산.
+
+---
+
 ## 작업: 세션 시작·재개 시 workflow 사용 여부 1회 확인 (완료)
 
 사용자 요청 — 모든 도구 작업에 workflow를 강제하지 않고, 새 세션 시작과 resume·clear·compact·handoff/process 기반 재개 때 첫 실행 전에 workflow 사용 여부를 한 번 확인하도록 공통 규칙과 양 플랫폼 자산을 동기화한다.
@@ -56,7 +70,7 @@
 
 ---
 
-## 작업: Codex 본진 전환 — Claude 기능 전면 이식 + CLI 고도화 (진행 중)
+## 작업: Codex 본진 전환 — Claude 기능 전면 이식 + CLI 고도화 (완료)
 
 사용자 요청 — 현재 Claude Code 중심의 배포·강제 레이어를 Codex에서도 모두 사용할 수 있게 이식하고, Codex 전용 설치 CLI를 완성한 뒤 커밋·푸시한다.
 
@@ -95,7 +109,7 @@ legacy 원본과 현재 사이트 문서를 대조해, 고도화할 가치가 �
 
 ---
 
-## 작업: 로컬 CLAUDE.md 동기화 (sync-claude-md.ts 개선)
+## 작업: 로컬 CLAUDE.md 동기화 (sync-claude-md.ts 개선) (보류)
 
 사용자 요청 — 완성된 컨벤션을 로컬 `~/.claude/CLAUDE.md` 에 정확히 반영.
 
@@ -154,7 +168,7 @@ Claude 외 에이전트는 컨벤션이 자동 주입되지 않으므로, AI 작
 
 ---
 
-## 작업: Claude Code 전용 에디션 (docs/claudecode/) + 설치 메뉴
+## 작업: Claude Code 전용 에디션 (docs/claudecode/) + 설치 메뉴 (보류)
 
 사용자 요청 — 컨벤션 각 .md 에서 언급 가능한 Claude Code 기능(hook·command·subagent·settings·output-style)을 전부 활용하는 CC 전용 docs 를 `docs/claudecode/` 에 완성하고, CLI 설치 메뉴로 설치 가능하게. 선행: 13개 .md 전수 검사(hook-enforce/augment/other/prose 분류) + 공식 hooks 스펙(code.claude.com/docs/en/hooks) WebFetch 검증(에이전트 초안의 camelCase·blockingMode·exit code 오류 교정).
 

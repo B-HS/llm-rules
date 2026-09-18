@@ -86,16 +86,17 @@ HARD 가 하나라도 있으면 SOFT 를 같은 reason 의 "(참고: …)" 로 �
 | 항목 | 값 |
 |------|----|
 | 이벤트 | `SessionStart` (matcher `startup\|resume\|clear\|compact`, timeout 15s) |
-| 동작 | 컨벤션 핵심 요약 + 작업 개시 프로토콜 + (있으면) `docs/PROCESS.md` 앞부분을 **`additionalContext` 로 주입**(`exit 0`) |
+| 동작 | workflow 선택 게이트 + 규칙 원문 포인터 + (있으면) `docs/PROCESS.md` 첫 활성 작업을 **`additionalContext`로 주입**(`exit 0`) |
 
 세션 시작/재개/클리어/컴팩션 시:
 
-1. **`docs/` 디렉토리를 보장**(`mkdir -p docs`) — comments.md §3 / ai-process.md §1.
-2. **컨벤션 문서 위치를 자동 감지**해 `세부:` 라인에 반영합니다. 우선순위: `LLM_RULES_CONVENTION_DIR` 환경변수 → 프로젝트 `$CLAUDE_PROJECT_DIR/.claude/convention` (미설정 시 cwd 기준) → 글로벌 `~/.claude/convention`. 각 후보는 `index.md` 존재 여부로 검증하며, 어디에도 없으면 경로 대신 **미설치 안내**를 주입합니다.
-3. 컨벤션 핵심 요약을 컨텍스트로 만듭니다. **요약 문구의 단일 출처는 스크립트(`session-context.sh`)의 주입 텍스트**이며, 드리프트 방지를 위해 이 문서에는 원문을 복제하지 않습니다. (주제: 함수·타입·주석·매직넘버/이모지·export·FSD/쿼리·커밋·시크릿·검증·질문 방식)
-4. **작업 개시 프로토콜**(새 도구 사용 작업과 세션·resume·clear·compact·handoff·PROCESS 재개마다 workflow 사용 여부를 한 번 질문하고 답을 기다림, 사용 선택 시 Fable high 메인과 Sonnet high 작업자 역할·소유권·상세 위임 계약, 독립 작업 병렬/의존 작업 직렬, 비사용 시 main 직접 수행, `PROCESS.md` 갱신, 공식 문서 확인)을 덧붙입니다. 원문의 단일 출처는 스크립트입니다.
-5. `docs/PROCESS.md` 가 있으면 **앞 200줄(`head -n 200`)** 을 "현재 작업 상태"로 덧붙입니다.
-6. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}` 로 출력합니다.
+1. stdin JSON의 `cwd`를 우선하고, 없으면 `$CLAUDE_PROJECT_DIR`, 마지막으로 현재 디렉터리를 사용해 프로젝트 경로를 확정합니다.
+2. **컨벤션 문서 위치를 자동 감지**해 원문 포인터만 주입합니다. 우선순위: `LLM_RULES_CONVENTION_DIR` → 프로젝트 `.claude/convention` → 글로벌 `~/.claude/convention`. 각 후보는 `index.md` 존재 여부로 검증합니다.
+3. **작업 개시 계약**은 선택 게이트, 네이티브 SessionStart 경계, handoff·PROCESS·prepare-new의 별도 책임, 역할 분리와 자주 위반되는 핵심 guardrail만 압축해서 주입합니다. 상세 규칙은 작업 직전에 원문에서 읽습니다.
+4. `docs/PROCESS.md`가 있으면 `(완료|보류)`가 아닌 첫 `## 작업:` 중 `(진행 중)`이거나 미완료 체크박스가 있는 섹션에서 제목과 미완료 이름 최대 4개만 덧붙입니다. 완료 이력과 세부 설명은 필요할 때만 읽습니다.
+5. `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}`로 출력합니다. hook 자체는 프로젝트 파일을 만들거나 수정하지 않습니다.
+
+`startup|resume|clear|compact`는 네이티브 SessionStart source입니다. handoff·PROCESS·prepare-new는 matcher 값이 아니므로 관련 Command와 재개 프롬프트가 선택 질문을 수행합니다.
 
 **커버 규칙**: ai-process.md §1·§14(`docs/PROCESS.md` 기반 작업, 세션 간 연속성) + §3(멈춤)·§4(모호한 지시 구체화)·§7(신규 스택 합의) 보강.
 

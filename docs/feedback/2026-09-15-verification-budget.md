@@ -1,5 +1,7 @@
 # 검증 비용과 중복 실행 제한
 
+> Codex Luna xhigh 고정 부분은 [Codex workflow 모델 고정 피드백](./2026-09-18-codex-model-routing.md)의 난도별 low·medium·high·xhigh 라우팅으로 대체되었습니다. 위험 비례 최소 검증과 성공 결과 재사용 원칙은 유지됩니다.
+
 ## 대상 파일
 
 - `docs/convention/ai-process.md`

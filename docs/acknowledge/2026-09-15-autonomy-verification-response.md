@@ -1,5 +1,7 @@
 # 자율 Git·검증 예산·응답 계약 결정
 
+> Codex Luna xhigh 고정은 [workflow 모델 라우팅·컨텍스트 예산 합의](./2026-09-18-workflow-routing-context-budget.md)의 난도별 effort 선택으로 대체되었습니다. Git·검증 예산·응답 계약은 유지됩니다.
+
 ## 결정
 
 - 일반 commit·push의 llm-rules 승인·차단 hook을 제거하고 플랫폼 권한은 무조건 허용합니다.

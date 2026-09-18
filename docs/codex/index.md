@@ -7,7 +7,7 @@ llm-rules의 기본 실행 환경입니다. 컨벤션 본문을 `AGENTS.md`로 �
 | Claude Code             | Codex                              |
 | ----------------------- | ---------------------------------- |
 | `CLAUDE.md` import      | `AGENTS.md` 코어와 주제별 전문     |
-| main·subagent 모델 설정 | `config.toml`의 main·agents 기본값 |
+| main·subagent 모델 설정 | 사용자 main 설정 + `config.toml`의 agents 기본값 |
 | lifecycle hooks         | `hooks.json` command hooks         |
 | slash commands          | Skills                             |
 | subagents               | Custom Agents                      |
@@ -35,7 +35,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 | 자산          | 글로벌 위치                                        | 프로젝트 위치                                  | 역할                                                |
 | ------------- | -------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------- |
 | Instructions  | `~/.codex/AGENTS.md`, `~/.codex/llm-rules/`        | `AGENTS.md`, `.llm-rules/`                     | 압축 코어 자동 주입과 주제별 전문 참조              |
-| Config        | `~/.codex/config.toml`                             | `.codex/config.toml`                           | Sol high main, Terra high subagent, 동시 4개 기본값 |
+| Config        | `~/.codex/config.toml`                             | `.codex/config.toml`                           | 사용자 main 보존, Terra medium subagent·동시 4개 기본값 |
 | Hooks         | `~/.codex/hooks.json`, `~/.codex/hooks/llm-rules/` | `.codex/hooks.json`, `.codex/hooks/llm-rules/` | 편집·세션 시점 guardrail                            |
 | Skills        | `~/.agents/skills/llm-rules-*/`                    | `.agents/skills/llm-rules-*/`                  | Subagent workflow·감사·검증·문서화                  |
 | Custom Agents | `~/.codex/agents/*.toml`                           | `.codex/agents/*.toml`                         | 구현·검증·조사 worker와 영역별 reviewer             |
@@ -43,7 +43,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 ## 확인
 
-새 Codex 세션에서 `/hooks`로 편집·세션 hook을 검토하고 신뢰 승인합니다. SessionStart hook은 새 실행 작업 전에 workflow 사용 여부를 한 번 묻도록 주입하며, 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 이전 선택을 승계하지 않습니다. 사용자가 선택하거나 `$llm-rules-subagent-workflow`를 직접 호출하면 Custom Agent로 위임하고, 선택하지 않으면 main이 직접 수행합니다. 일반 commit·push에는 llm-rules hook이나 추가 승인이 없으며 Execpolicy가 allow합니다. 모든 force push는 파괴적 예외로 계속 금지합니다.
+새 Codex 세션에서 `/hooks`로 편집·세션 hook을 검토하고 신뢰 승인합니다. SessionStart hook은 공식 source인 startup·resume·clear·compact에서 workflow 선택 게이트와 첫 활성 PROCESS 작업만 주입합니다. handoff·PROCESS·prepare-new 재개는 각각의 Skill과 재개 프롬프트가 같은 질문을 먼저 수행합니다. 사용자가 선택하거나 `$llm-rules-subagent-workflow`를 직접 호출하면 Custom Agent로 위임하고, 선택하지 않으면 main이 직접 수행합니다. 일반 commit·push에는 llm-rules hook이나 추가 승인이 없으며 Execpolicy가 allow합니다. 모든 force push는 파괴적 예외로 계속 금지합니다.
 
 ```bash
 codex execpolicy check --pretty --rules ~/.codex/rules/llm-rules.rules -- git push --force origin main

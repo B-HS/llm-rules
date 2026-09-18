@@ -66,7 +66,7 @@ llm-rules Claude Code 에디션이 설치하는 **10개 슬래시 커맨드**입
 - **목적**: `ai-process.md` §1·§2 에 따라 `docs/PROCESS.md` 를 생성·갱신합니다. 작업 a·b·c·d 항목을 markdown 체크리스트로 정리하고, 매 스텝의 상태를 체크합니다. 세션이 바뀌어도 작업 연속성을 보장하기 위한 단일 작업 상태 파일입니다.
 - **사용법**: `/llm-rules:process`
 - **인자**: (선택) 새로 추가할 작업 설명. 생략 시 현재 `PROCESS.md` 상태를 점검·갱신.
-- **연계**: 현재 작업의 workflow 선택이 없으면 먼저 한 번 묻고 답을 받은 뒤 파일을 읽습니다. `session-context.sh` 훅은 세션 시작/재개 시 `docs/PROCESS.md` 앞부분과 같은 선택 게이트를 컨텍스트로 자동 주입합니다.
+- **연계**: 현재 작업의 workflow 선택이 없으면 먼저 한 번 묻고 답을 받은 뒤 파일을 읽습니다. `session-context.sh` 훅은 세션 시작/재개 시 `docs/PROCESS.md`의 첫 활성 작업과 같은 선택 게이트만 자동 주입합니다.
 
 ### `/llm-rules:verify`
 - **목적**: `ai-process.md` §8.1에 따라 변경 위험과 실행 경로에 필요한 최소 typecheck·lint/format·관련 테스트·실행 확인을 한 번 수행합니다. 이미 성공한 결과는 재사용하고 실패 수정 뒤 관련 검사만 한 번 다시 실행합니다.
@@ -115,7 +115,7 @@ llm-rules Claude Code 에디션이 설치하는 **10개 슬래시 커맨드**입
 슬래시 커맨드는 **명시적 호출**이고, 훅은 **자동 실행**입니다. 둘은 같은 컨벤션을 공유하지만 시점이 다릅니다.
 
 - `lint-edit.sh`(PostToolUse): 편집 직후 `useCallback`/`useMemo`·백엔드 `throw new Error`·`process.env` 직접접근을 즉시 차단(HARD), `function` 키워드·코드 주석·잘못된 default export·`HACK`/`FIXME`/`@ts-ignore`·sanitize 없는 `dangerouslySetInnerHTML` 를 경고(SOFT)합니다. → `audit-conventions` 의 자동화 부분.
-- `scan-secrets.sh`(PreToolUse)·`session-context.sh`(SessionStart): 시크릿 편집을 차단하고, 세션 시작·재개 시 workflow 선택 게이트, 컨벤션 요약과 `docs/PROCESS.md`를 주입합니다.
+- `scan-secrets.sh`(PreToolUse)·`session-context.sh`(SessionStart): 시크릿 편집을 차단하고, 세션 시작·재개 시 workflow 선택 게이트, 규칙 원문 포인터와 `docs/PROCESS.md`의 첫 활성 작업만 주입합니다.
 - `/llm-rules:workflow`, `verification-worker`, `edge-case-verification-worker`: 위험비례 주 검증을 한 번 수행하고 꼭 필요한 애매성만 최소 비용으로 판정합니다.
 
 세부 동작은 `docs/claudecode/hooks.md` 와 `settings.json` 을, 컨벤션 본문은 `docs/convention/*.md` 를 참고하세요.

@@ -30,8 +30,8 @@ Claude Code는 1단계와 2단계를 순서대로 실행합니다. 각 설치기
 | 기본 지침              | `AGENTS.md`                   | `CLAUDE.md`               |
 | 생명주기 자동화        | `hooks.json` Hooks            | `settings.json` Hooks     |
 | 다중 에이전트 workflow | Subagent workflow Skill       | Workflow Command          |
-| 하위 작업              | Terra/Luna high · Luna xhigh  | Sonnet high · Haiku xhigh |
-| 메인 모델              | Sol high                      | Fable high                |
+| 하위 작업              | Terra medium/high · Luna low/high | Sonnet high · Haiku xhigh |
+| 메인 모델              | 작업별 Sol high 또는 Terra medium | Fable high                |
 | 명령 정책              | Execpolicy Rules              | Permissions               |
 | 응답 규칙              | `AGENTS.md` 커뮤니케이션 규칙 | Output Style              |
 
@@ -39,7 +39,7 @@ Claude Code 전용 자산은 기존 구조를 유지하고 Codex 자산은 별�
 
 ## 범용 에이전트 호환
 
-Codex, opencode, pi에는 `AGENTS.md` 압축 코어와 전문 사본을 설치하고 Cursor에는 always-on rule을 설치합니다. Codex 전체 네이티브 기능이 필요하면 위의 Codex 전용 설치기를 사용합니다.
+Codex, opencode, pi에는 `AGENTS.md` 압축 코어와 전문 사본을 설치하고 Cursor에는 always-on rule을 설치합니다. 이 공통 코어에는 새 chat/task/session, reopen/resume, clear/reset, compact/summarize, handoff/process를 같은 workflow 선택 경계로 취급하는 규칙이 포함됩니다. opencode·pi·Cursor는 이 저장소가 별도 SessionStart hook을 설치하지 않으므로 룰 파일과 재개 프롬프트가 질문을 수행합니다. Copilot·Windsurf는 각 제품의 룰 파일에서 `docs/convention/`을 직접 참조해야 합니다. Codex 전체 네이티브 기능이 필요하면 위의 Codex 전용 설치기를 사용합니다.
 
 ```bash
 cd /path/to/project

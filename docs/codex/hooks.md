@@ -6,7 +6,9 @@
 | -------------------- | -------------------------- | -------------------------------------------------------------------- |
 | `scan-secrets.sh`    | `PreToolUse(apply_patch)`  | 새로 추가되는 코드의 고신뢰 시크릿 패턴 차단                       |
 | `lint-edit.sh`       | `PostToolUse(apply_patch)` | 변경 TS·JS에 Prettier 적용 후 명백한 위반은 재작업, 휴리스틱은 경고 |
-| `session-context.sh` | `SessionStart`             | workflow 선택 질문, 컨벤션 요약, `docs/PROCESS.md` 앞부분 주입      |
+| `session-context.sh` | `SessionStart`             | workflow 선택 게이트, 핵심 guardrail, 규칙 포인터, 첫 활성 작업만 주입 |
+
+`SessionStart` matcher의 네 source는 공식 Codex 값인 `startup|resume|clear|compact`입니다. handoff·PROCESS·prepare-new는 source 이름이 아니므로 각 Skill과 재개 프롬프트가 첫 단계에서 같은 선택 질문을 담당합니다. hook은 입력 JSON의 `cwd`를 기준으로 프로젝트를 찾고, 전체 컨벤션과 PROCESS를 복제하지 않습니다. `(완료|보류)`가 아닌 첫 `## 작업:` 블록 중 `(진행 중)`이거나 미완료 체크박스가 있는 섹션에서 제목과 미완료 이름 최대 4개만 주입합니다.
 
 ## Claude Hook과의 차이
 

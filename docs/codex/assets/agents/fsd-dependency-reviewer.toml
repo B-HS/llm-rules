@@ -2,7 +2,7 @@ name = "fsd_dependency_reviewer"
 description = "FSD 레이어 배치와 import 방향, 순환 의존, SFC 경계를 읽기 전용으로 검토합니다."
 sandbox_mode = "read-only"
 model = "gpt-5.6-luna"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 developer_instructions = """
 적용되는 AGENTS.md와 §0이 가리키는 fsd.md, frontend.md를 먼저 읽으세요.
 실제 디렉터리 구조와 tsconfig alias를 확인하고 shared, entities, features, widgets, pages, app 사이의 값 import와 type import를 구분해 추적하세요.

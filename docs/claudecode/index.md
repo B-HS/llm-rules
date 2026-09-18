@@ -46,7 +46,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 |---|---|---|
 | `scan-secrets.sh` | PreToolUse(Edit·Write·MultiEdit) | 새로 쓰는 내용에 고신뢰 시크릿(`AKIA…`, `gh[pousr]_…`, `sk-…`, PRIVATE KEY, `xox…`) 이 있으면 `exit 2` 차단. `.md`/`.mdx`/`.txt` 는 예시 오탐 방지로 건너뜀 |
 | `lint-edit.sh` | PostToolUse(Edit·Write·MultiEdit) | TS/JS 만 대상(아니면 no-op). `prettier --write` 후 검사. **HARD**(`{"decision":"block"}`): `useCallback`/`useMemo`, backend 경로의 `throw new Error`·`process.env` 직접접근. **SOFT**(systemMessage 경고): `function` 키워드, 코드 주석, page/layout 외 `export default`, HACK/FIXME/`@ts-ignore`, sanitize 없는 `dangerouslySetInnerHTML` |
-| `session-context.sh` | SessionStart(startup·resume·clear·compact) | 컨벤션 핵심 요약 + 작업 개시 프로토콜 + (있으면) `docs/PROCESS.md` 앞부분을 `additionalContext` 로 주입. `docs/` 디렉토리 보장 |
+| `session-context.sh` | SessionStart(startup·resume·clear·compact) | workflow 선택 게이트 + 핵심 guardrail + 규칙 포인터 + 첫 활성 작업만 주입 |
 
 ### Settings — `permissions`
 
@@ -65,7 +65,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 
 `implementation-worker` · `verification-worker` · `edge-case-verification-worker` · `research-worker` · `convention-reviewer` · `fsd-dependency-reviewer` · `type-utility-reviewer` · `backend-convention-reviewer` · `security-reviewer` · `tanstack-query-reviewer` · `desktop-security-reviewer`
 
-새 도구 사용 작업은 시작 전에 workflow 사용 여부를 한 번 묻고 답을 기다립니다. 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 이전 선택을 승계하지 않습니다. 사용자가 선택하거나 `/llm-rules:workflow`를 직접 호출하면 메인은 상세 위임 계약(목표·근거·소유 범위·규칙·순서·엣지 케이스·검증·보고·Git 경계·의존 관계)을 전달하고, 성공 검증을 반복하지 않은 채 검증된 변경만 논리 단위로 일반 commit/push합니다. 선택하지 않으면 main이 직접 수행합니다.
+새 도구 사용 작업은 시작 전에 workflow 사용 여부를 한 번 묻고 답을 기다립니다. SessionStart는 startup·resume·clear·compact를 처리하고, handoff·PROCESS·prepare-new 재개는 관련 Command와 재개 프롬프트가 같은 질문을 먼저 수행합니다. 사용자가 선택하거나 `/llm-rules:workflow`를 직접 호출하면 메인은 상세 위임 계약(목표·근거·소유 범위·규칙·순서·엣지 케이스·검증·보고·Git 경계·의존 관계)을 전달하고, 성공 검증을 반복하지 않은 채 검증된 변경만 논리 단위로 일반 commit/push합니다. 선택하지 않으면 main이 직접 수행합니다.
 
 ### Output Style — `llm-rules`
 

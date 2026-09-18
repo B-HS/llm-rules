@@ -35,7 +35,7 @@ hook 이 **구조적으로 못 잡는 것**(서브에이전트가 메우는 영�
 
 ## workflow 위임
 
-- **선택 후 workflow 시작**: 파일 조사·구현·테스트·리서치처럼 도구를 쓰는 새 작업은 workflow 사용 여부를 한 번 묻고 답을 기다립니다. 선택은 현재 작업에만 유효하며 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 다시 묻습니다. 사용자가 선택하거나 `/llm-rules:workflow`를 직접 호출하면 Fable high 메인이 독립된 작업은 병렬로, 같은 파일을 수정하거나 선행 결과가 필요한 작업은 직렬로 배정합니다. 선택하지 않으면 main이 직접 수행합니다.
+- **선택 후 workflow 시작**: 파일 조사·구현·테스트·리서치처럼 도구를 쓰는 새 작업은 workflow 사용 여부를 한 번 묻고 답을 기다립니다. 선택은 현재 작업에만 유효하며 새 세션·resume·clear·compact·handoff·PROCESS·prepare-new 재개에서는 다시 묻습니다. 다른 환경의 새 chat/task, reopen/reset, compact/summarize도 의미가 같으면 같은 경계입니다. 사용자가 선택하거나 `/llm-rules:workflow`를 직접 호출하면 Fable high 메인이 독립된 작업은 병렬로, 같은 파일을 수정하거나 선행 결과가 필요한 작업은 직렬로 배정합니다. 선택하지 않으면 main이 직접 수행합니다.
 - **작업자 선택**: `research-worker`는 읽기 전용 사실 확인, `implementation-worker`는 소유 파일이 분명한 구현, `verification-worker`는 위험비례 최소 검증을 맡습니다. 세 작업자는 Sonnet high입니다. `edge-case-verification-worker`는 주 검증 뒤 남은 실질적 애매성만 Haiku xhigh로 판정합니다. 모두 Git 작업을 하지 않습니다.
 - **상세 위임 계약**: 메인은 모든 위임에 ① 목표·완료 조건 ② 확인된 파일·심볼·현재 동작 근거 ③ 소유 범위·비목표 ④ 적용 규칙·커맨드 ⑤ 실행 순서 ⑥ 엣지 케이스·금지 우회 ⑦ 검증 명령·합격 기준 ⑧ 보고 형식 ⑨ commit/push·브랜치·rebase·merge 금지 ⑩ 병렬/직렬 의존·대기 관계를 빠짐없이 전달합니다.
 - **통합과 Git**: 메인은 실제 diff와 검증 출력을 확인하되 성공 명령은 반복하지 않습니다. 검증된 변경만 논리 단위로 선별 스테이징해 AI 트레일러 없이 일반 commit/push를 자동 실행합니다.

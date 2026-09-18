@@ -203,15 +203,27 @@ const pruneManagedHookEntry = (entry: unknown) => {
     if (hooks.length === 0) return undefined
     return { ...entry, hooks }
 }
-const ROOT_CONFIG_KEYS = ['model', 'model_reasoning_effort']
 const AGENT_CONFIG_KEYS = ['enabled', 'default_subagent_model', 'default_subagent_reasoning_effort', 'max_concurrent_threads_per_session']
-const ROOT_CONFIG_LINES = ['model = "gpt-5.6-sol"', 'model_reasoning_effort = "high"']
 const AGENT_CONFIG_LINES = [
     'enabled = true',
     'default_subagent_model = "gpt-5.6-terra"',
-    'default_subagent_reasoning_effort = "high"',
+    'default_subagent_reasoning_effort = "medium"',
     'max_concurrent_threads_per_session = 4',
 ]
+
+const removeLegacyManagedMainDefaults = (source: string) => {
+    const lines = source.split('\n')
+    const hasManagedModel = lines.some((line) => /^\s*model\s*=\s*"gpt-5\.6-sol"\s*$/.test(line))
+    const hasManagedEffort = lines.some((line) => /^\s*model_reasoning_effort\s*=\s*"high"\s*$/.test(line))
+    if (!hasManagedModel || !hasManagedEffort) return source
+    return lines
+        .filter(
+            (line) =>
+                !/^\s*model\s*=\s*"gpt-5\.6-sol"\s*$/.test(line) &&
+                !/^\s*model_reasoning_effort\s*=\s*"high"\s*$/.test(line),
+        )
+        .join('\n')
+}
 
 const removeTomlAssignments = (source: string, keys: string[]) =>
     source
@@ -224,13 +236,13 @@ const mergeManagedConfig = (original: string) => {
     const firstTableIndex = original.search(tableHeader)
     const rootSection = firstTableIndex === -1 ? original : original.slice(0, firstTableIndex)
     const tableSections = firstTableIndex === -1 ? '' : original.slice(firstTableIndex)
-    const root = removeTomlAssignments(rootSection, ROOT_CONFIG_KEYS)
+    const root = removeLegacyManagedMainDefaults(rootSection)
     const agentHeader = /^[\t ]*\[agents\][\t ]*(?:#.*)?\r?$/m
     const agentMatch = agentHeader.exec(tableSections)
-    const rootWithManagedKeys = `${ROOT_CONFIG_LINES.join('\n')}\n${root.trimStart()}`.trimEnd()
+    const preservedRoot = root.trim()
 
     if (agentMatch === null || agentMatch.index === undefined) {
-        return `${rootWithManagedKeys}${tableSections ? `\n\n${tableSections.trim()}` : ''}\n\n[agents]\n${AGENT_CONFIG_LINES.join('\n')}\n`
+        return `${preservedRoot}${preservedRoot && tableSections ? '\n\n' : ''}${tableSections.trim()}${preservedRoot || tableSections ? '\n\n' : ''}[agents]\n${AGENT_CONFIG_LINES.join('\n')}\n`
     }
 
     const agentStart = agentMatch.index
@@ -244,7 +256,7 @@ const mergeManagedConfig = (original: string) => {
     const mergedAgentBody = removeTomlAssignments(currentAgentBody, AGENT_CONFIG_KEYS).trim()
     const agentSection = [currentAgentHeader, AGENT_CONFIG_LINES.join('\n'), mergedAgentBody].filter(Boolean).join('\n')
 
-    return `${rootWithManagedKeys}\n\n${beforeAgent.trimEnd()}${beforeAgent.trim() ? '\n' : ''}${agentSection}${afterAgent ? `\n${afterAgent.trim()}` : ''}\n`
+    return `${preservedRoot}${preservedRoot ? '\n\n' : ''}${beforeAgent.trimEnd()}${beforeAgent.trim() ? '\n' : ''}${agentSection}${afterAgent ? `\n${afterAgent.trim()}` : ''}\n`
 }
 
 const validateToml = (source: string, path: string) => {
@@ -267,13 +279,13 @@ const installConfig = async () => {
     validateToml(next, configPath)
 
     if (options.dryRun) {
-        log(`config: ${configPath}의 main·subagent 기본값 병합 예정`)
+        log(`config: ${configPath}의 workflow agent 기본값 병합 예정`)
         return
     }
     await mkdir(location.codexDir, { recursive: true })
     if (options.backup && exists && next !== original) await copyFile(configPath, `${configPath}.bak`)
     if (next !== original) await Bun.write(configPath, next)
-    log(`config: ${configPath}의 관리 키 병합`)
+    log(`config: ${configPath}의 workflow agent 관리 키 병합`)
 }
 
 const copyHookScripts = async () => {

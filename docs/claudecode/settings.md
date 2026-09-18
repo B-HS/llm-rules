@@ -76,7 +76,7 @@
 |--------|----------------|----------|:---:|------|
 | **PreToolUse** | `Edit\|Write\|MultiEdit` | `scan-secrets.sh` | 15s | 새로 쓰는 내용에 고신뢰 시크릿(`AKIA…`, `gh[pousr]_…`, `sk-…`, `BEGIN … PRIVATE KEY`, `xox…`)이 있으면 exit 2 차단. `.md`/`.mdx`/`.txt` 는 예시 오탐 방지로 건너뜀. |
 | **PostToolUse** | `Edit\|Write\|MultiEdit` | `lint-edit.sh` | 60s | TS/JS 만 검사(아니면 no-op). `prettier --write` 후, HARD 위반은 `{"decision":"block"}` 으로 수정 요구(useCallback/useMemo, backend 경로의 `throw new Error`·`process.env` 직접접근), SOFT 위반은 `systemMessage` 경고(function 키워드·코드 주석·page/layout 외 default export·HACK/FIXME/@ts-ignore·sanitize 없는 dangerouslySetInnerHTML). |
-| **SessionStart** | `startup\|resume\|clear\|compact` | `session-context.sh` | 15s | 컨벤션 핵심 요약 + (있으면) `docs/PROCESS.md` 앞부분(최대 200줄)을 `additionalContext` 로 주입. `docs/` 디렉토리 보장. |
+| **SessionStart** | `startup\|resume\|clear\|compact` | `session-context.sh` | 15s | workflow 선택 게이트 + 핵심 guardrail + 규칙 포인터 + 첫 활성 작업의 제목·미완료 체크박스 이름 최대 4개만 주입. |
 
 > 모든 훅은 `jq` 가 없으면 `exit 0`(no-op)으로 안전하게 빠집니다.
 

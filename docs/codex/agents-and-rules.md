@@ -6,12 +6,12 @@ Codex Subagent workflow는 main orchestrator와 worker·reviewer를 분리합니
 
 | Worker                          | 모델·sandbox                   | 역할                                             |
 | ------------------------------- | ------------------------------ | ------------------------------------------------ |
-| `implementation_worker`         | Terra high, `workspace-write`  | 지정 소유 범위 구현과 관련 검증                  |
-| `verification_worker`           | Luna high, `workspace-write`   | 위험 비례 최소 검증과 성공 증거 전달             |
-| `edge_case_verification_worker` | Luna xhigh, `workspace-write`  | 남은 모호성의 단일 검사 또는 테스트 부채 판정    |
-| `research_worker`               | Terra high, `read-only`        | 공식 문서·실제 코드 근거 조사                    |
+| `implementation_worker`         | Terra medium, `workspace-write` | 지정 소유 범위 구현과 관련 검증                 |
+| `verification_worker`           | Luna medium, `workspace-write`  | 위험 비례 최소 검증과 성공 증거 전달            |
+| `edge_case_verification_worker` | Luna high, `workspace-write`    | 남은 모호성의 단일 검사 또는 테스트 부채 판정   |
+| `research_worker`               | Terra medium, `read-only`       | 공식 문서·실제 코드 근거 조사                   |
 
-Reviewer 7종은 코드 변경 없이 근거가 있는 검토 결과만 반환합니다. 의미론적·복합 검토에는 Terra high, 좁고 반복 가능한 검토에는 Luna high를 사용합니다.
+Reviewer 7종은 코드 변경 없이 근거가 있는 검토 결과만 반환합니다. 일반 분석은 Terra medium, 복잡한 보안·계층 판단은 Terra high, 좁고 반복 가능한 검토는 Luna medium을 사용합니다. workflow는 실제 난도에 따라 명시적 spawn 설정으로 기본값을 올리거나 내립니다.
 
 | Agent                         | 검토 영역                                |
 | ----------------------------- | ---------------------------------------- |
@@ -25,7 +25,7 @@ Reviewer 7종은 코드 변경 없이 근거가 있는 검토 결과만 반환�
 
 글로벌 파일은 `~/.codex/agents`, 프로젝트 파일은 `.codex/agents`에 설치됩니다. `$llm-rules-subagent-workflow`는 각 위임에 목표·완료 조건·파일 근거·소유권·규칙·순서·edge case·최소 검증·성공 증거·보고·Git 금지·의존 관계를 명시하도록 요구합니다.
 
-주 검증은 변경 위험과 직접 연결된 최소 검사만 실행합니다. 같은 변경 상태에서 성공한 결과는 main과 worker가 재사용하며 다시 실행하지 않습니다. 원인 수정 뒤 관련 검사 1회로 제한하고 같은 실패가 세 번 이어지면 중단합니다. 남은 모호성이 결과를 바꿀 때만 Luna xhigh worker를 쓰며, 지나치게 특수한 사례는 `docs/quality-assurance`의 테스트 부채로 남깁니다.
+주 검증은 변경 위험과 직접 연결된 최소 검사만 실행합니다. 같은 변경 상태에서 성공한 결과는 main과 worker가 재사용하며 다시 실행하지 않습니다. 원인 수정 뒤 관련 검사 1회로 제한하고 같은 실패가 세 번 이어지면 중단합니다. 남은 모호성이 결과를 바꿀 때만 Luna high worker를 쓰고, 특히 어려운 추론 근거가 있을 때만 xhigh로 올립니다. 지나치게 특수한 사례는 `docs/quality-assurance`의 테스트 부채로 남깁니다.
 
 ## Execpolicy Rules
 

@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Edit, Glob, Bash
 
 ai-process 의 "문서 기반 작업" 원칙에 따라 `docs/PROCESS.md` 작업 체크리스트를 유지·갱신합니다. 한국어, 존댓말, 간결하게 진행하세요.
 
-현재 실행 작업의 workflow 선택이 아직 없으면 파일을 읽거나 갱신하기 전에 “이번 작업을 다중 에이전트 workflow로 진행할까요? A. 사용 / B. 사용하지 않음”을 한 번 묻고 답을 기다리세요. 새 세션·resume·clear·compact·handoff·PROCESS 재개에서는 문서에 남은 이전 선택을 승계하지 않습니다.
+현재 실행 작업의 workflow 선택이 아직 없으면 파일을 읽거나 갱신하기 전에 “이번 작업을 다중 에이전트 workflow로 진행할까요? A. 사용 / B. 사용하지 않음”을 한 번 묻고 답을 기다리세요. 새 세션·resume·clear·compact·handoff·PROCESS·prepare-new 재개에서는 문서에 남은 이전 선택을 승계하지 않습니다.
 
 인자(이번에 갱신/추가할 작업, 비어 있을 수 있음): $ARGUMENTS
 

@@ -1,6 +1,6 @@
 # 2026-09-15 — 자동 Git·다중 에이전트 운영 계약
 
-> Git guard 유지, 고정 검증 사다리, 하위 모델 high 고정 결정은 [자율 Git·검증 예산·응답 계약 결정](./2026-09-15-autonomy-verification-response.md)으로 대체되었습니다.
+> workflow 강제는 [workflow 선택 게이트 합의](./2026-09-18-workflow-selection-gate.md), Codex main·하위 모델 고정은 [workflow 모델 라우팅·컨텍스트 예산 합의](./2026-09-18-workflow-routing-context-budget.md)로 대체되었습니다. Git 운영 계약은 유지됩니다.
 
 ## 사용자 결정
 
