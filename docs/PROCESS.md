@@ -5,6 +5,19 @@
 
 ---
 
+## 작업: Pi에서 Codex llm-rules 동등 인식 방법 재조사 (완료)
+
+사용자 요청 — 현재 프로젝트의 Pi 지원 여부를 실제 설치기와 최신 Pi 동작 기준으로 확인하고, Codex에 인식된 llm-rules 자산을 Pi에서 어디까지 동일하게 인식시킬 수 있는지 정확한 설치 절차와 한계로 설명한다.
+
+- [x] 1. 로컬 Pi 설치기·테스트·배포 산출물 확인 — 클론 설치기는 `--global pi`로 `~/.pi/agent/AGENTS.md`와 전문 11개를 설치하며 구형 `~/AGENTS.md` 관리 블록도 백업 후 제거함을 확인. 원격 설치기는 코어·전문만 설치하고 구형 블록 마이그레이션은 하지 않는 불일치 확인
+- [x] 2. 최신 Pi 공식 지침·Skills·확장 구조 확인 — Pi 0.85.1과 공식 문서에서 전역·상위·현재 경로의 `AGENTS.md`, `~/.agents/skills`와 Pi 전용 Skills 자동 탐색, TypeScript Extensions, 내장 subagent·permission 부재를 확인
+- [x] 3. Codex 자산군과 Pi 대응 범위 비교 및 실행 절차 확정 — Instructions는 Pi 전용 경로 설치로 동등화하고 공유 Skills 10개는 이미 탐색 가능. Codex Hooks·Custom Agents·Execpolicy는 Pi가 직접 읽지 않아 Extensions로 별도 이식해야 함을 확정
+- [x] 4. 조사 근거 검증·PROCESS 결과 기록 — 현재 머신에 Pi 전역 코어·전문이 없고 Codex 코어·전문과 공유 Skills 10개만 있음을 메타데이터·`cmp`로 확인. `bun run init-agents --global pi --dry-run`에서 Pi 파일 생성과 구형 홈 블록 제거 예정 출력 확인
+
+기준 문서: `docs/convention/ai-process.md` · `docs/agents-core.md` · `scripts/init-agents.ts` · Pi 공식 문서.
+
+---
+
 ## 작업: Pi 설치 시 구형 홈 AGENTS 관리 블록 마이그레이션 (완료)
 
 사용자 요청 — Pi 전역 설치가 현재 llm-rules를 설치한 뒤에도 존재하지 않는 `.Codex/convention/`을 참조하는 과거 `~/AGENTS.md`를 함께 읽는 문제를, 사용자의 수동 정리 없이 설치기가 안전하게 해결하도록 수정한다.
