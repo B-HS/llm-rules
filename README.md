@@ -11,8 +11,9 @@
 | Codex             | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-codex.sh)"`       | `AGENTS.md`, Config, Hooks, Skills, Custom Agents, Execpolicy Rules |
 | Claude Code 1단계 | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install.sh)"`             | `CLAUDE.md`와 공통 컨벤션                                           |
 | Claude Code 2단계 | `bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-claude-code.sh)"` | Settings, Hooks, Commands, Subagents, Output Style                  |
+| Pi Agent          | `LLM_RULES_GLOBAL=pi bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/init-agents.sh)"` | `~/.pi/agent/AGENTS.md`, 전문 사본 11개                            |
 
-Claude Code는 1단계와 2단계를 순서대로 실행합니다. 각 설치기는 글로벌과 프로젝트 범위를 대화형으로 선택합니다.
+Claude Code는 1단계와 2단계를 순서대로 실행합니다. Codex와 Claude Code 설치기는 글로벌과 프로젝트 범위를 대화형으로 선택합니다.
 
 저장소를 클론한 경우:
 
@@ -20,6 +21,7 @@ Claude Code는 1단계와 2단계를 순서대로 실행합니다. 각 설치기
 | ----------- | -------------------------------------------------------------- | --------------------------------------------- |
 | Codex       | `bun run install-codex --global --all`                         | `bun run install-codex --project --all`       |
 | Claude Code | `bun run sync` 후 `bun run install-claude-code --global --all` | `bun run install-claude-code --project --all` |
+| Pi Agent    | `bun run init-agents --global pi`                              | `bun run init-agents`                         |
 
 상세 옵션과 검증 방법은 [Codex 에디션](./docs/codex/index.md), [Claude Code 에디션](./docs/claudecode/index.md)에서 확인합니다.
 
@@ -39,9 +41,25 @@ Claude Code 전용 자산은 기존 구조를 유지하고 Codex 자산은 별�
 
 ## 범용 에이전트 호환
 
-Codex, opencode, pi에는 `AGENTS.md` 압축 코어와 전문 사본을 설치하고 Cursor에는 always-on rule을 설치합니다. 이 공통 코어에는 새 chat/task/session, reopen/resume, clear/reset, compact/summarize, handoff/process를 같은 workflow 선택 경계로 취급하는 규칙이 포함됩니다. opencode·pi·Cursor는 이 저장소가 별도 SessionStart hook을 설치하지 않으므로 룰 파일과 재개 프롬프트가 질문을 수행합니다. Copilot·Windsurf는 각 제품의 룰 파일에서 `docs/convention/`을 직접 참조해야 합니다. Codex 전체 네이티브 기능이 필요하면 위의 Codex 전용 설치기를 사용합니다.
+Codex, opencode, pi에는 `AGENTS.md` 압축 코어와 전문 사본을 설치하고 Cursor에는 always-on rule을 설치합니다. 이 공통 코어에는 새 chat/task/session, reopen/resume, clear/reset, compact/summarize, handoff/process를 같은 workflow 선택 경계로 취급하는 규칙이 포함됩니다. opencode·pi·Cursor는 이 저장소가 별도 SessionStart hook을 설치하지 않으므로 룰 파일과 재개 프롬프트가 질문을 수행합니다. Copilot·Windsurf는 각 제품의 룰 파일에서 `docs/convention/`을 직접 참조해야 합니다.
 
-Pi 전역 설치는 `~/.pi/agent/AGENTS.md`와 `~/.pi/agent/llm-rules/`를 생성하고, 예전 설치가 남긴 `~/AGENTS.md`의 `rules-convention` 관리 블록만 백업 후 제거합니다. 사용자 소유 내용은 유지합니다.
+### Pi Agent
+
+Pi 전역 설치는 `~/.pi/agent/AGENTS.md`와 `~/.pi/agent/llm-rules/`에 압축 코어와 전문 사본 11개를 설치합니다. Pi는 `~/.agents/skills/`도 기본 탐색합니다.
+
+원격 설치기는 Pi 코어와 전문만 설치합니다.
+
+```bash
+LLM_RULES_GLOBAL=pi bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/init-agents.sh)"
+```
+
+저장소를 클론한 설치기는 위 자산에 더해 예전 설치가 남긴 `~/AGENTS.md`의 `rules-convention` 관리 블록만 백업 후 제거하고, 사용자 소유 내용은 유지합니다.
+
+```bash
+bun run init-agents --global pi
+```
+
+Pi는 Codex Hooks, Custom Agents, Execpolicy Rules를 읽지 않으므로 Codex와 동일한 네이티브 자동화·권한 정책·하위 에이전트 실행을 제공하지 않습니다. 해당 기능이 필요하면 Codex 전용 설치기를 사용합니다.
 
 ```bash
 cd /path/to/project

@@ -5,6 +5,19 @@
 
 ---
 
+## 작업: README Pi Agent 전용 설치 안내 추가 (완료)
+
+사용자 요청 — README 설치 영역에서 Pi Agent용 글로벌 설치 명령과 설치 범위, Codex 네이티브 기능과의 차이를 바로 확인할 수 있도록 안내를 추가한다.
+
+- [x] 1. 기존 설치 표·범용 호환 섹션과 중복 없는 배치 확정 — 상단 원격 설치 표, 클론 설치 표, 범용 호환의 Pi 전용 소제목으로 나눠 즉시 찾을 수 있게 배치
+- [x] 2. Pi 전용 설치 명령·산출물·지원 한계 문서화 — `LLM_RULES_GLOBAL=pi`, `--global pi`, Pi 전역 코어·전문 11개, 공유 Skills 탐색, Codex 네이티브 자산 비호환을 명시하고 원격·클론 마이그레이션 차이를 구분
+- [x] 3. Markdown 포맷·명령 정합성 검증 — 관련 Pi 명령·경로 `rg` 확인과 `git diff --check -- README.md` 통과. 프로젝트에 formatter 스크립트와 Prettier 의존성이 없어 포맷터는 미실행
+- [x] 4. 결과 기록·선별 커밋·푸시 — README와 PROCESS만 선별 검토 후 커밋·푸시
+
+기준 문서: `docs/convention/ai-process.md` · `README.md` · `scripts/init-agents.ts` · `install-files/init-agents.sh`.
+
+---
+
 ## 작업: Pi에서 Codex llm-rules 동등 인식 방법 재조사 (완료)
 
 사용자 요청 — 현재 프로젝트의 Pi 지원 여부를 실제 설치기와 최신 Pi 동작 기준으로 확인하고, Codex에 인식된 llm-rules 자산을 Pi에서 어디까지 동일하게 인식시킬 수 있는지 정확한 설치 절차와 한계로 설명한다.
