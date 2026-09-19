@@ -5,6 +5,30 @@
 
 ---
 
+## 작업: Pi 설치 시 구형 홈 AGENTS 관리 블록 마이그레이션 (완료)
+
+사용자 요청 — Pi 전역 설치가 현재 llm-rules를 설치한 뒤에도 존재하지 않는 `.Codex/convention/`을 참조하는 과거 `~/AGENTS.md`를 함께 읽는 문제를, 사용자의 수동 정리 없이 설치기가 안전하게 해결하도록 수정한다.
+
+- [x] 1. 마이그레이션 계약·회귀 기준 확정 — 완전한 `rules-convention` 마커 쌍만 식별하고, 사용자 소유 텍스트 보존·백업·dry-run·불완전 마커 보존을 전용 테스트로 고정
+- [x] 2. Pi 글로벌 설치기 구현 — `--global pi`에서만 Pi 전역 코어·전문 설치 성공 뒤 구형 홈 관리 블록을 백업 후 제거하도록 연결
+- [x] 3. 최소 검증·기록 — `bun test scripts/init-agents.test.ts` 3개 테스트·28개 assertion 통과. 새 설치·마이그레이션·멱등성·사용자 텍스트 보존·`--no-backup`을 임시 HOME에서 확인
+
+기준 문서: `docs/convention/ai-process.md` · `common.md` · `comments.md` · `security.md` · `scripts/init-agents.ts`.
+
+---
+
+## 작업: Pi 환경의 llm-rules 인식 상태 점검 (완료)
+
+사용자 요청 — Pi 시작 화면에 표시된 `~/AGENTS.md`, Skills, 도구 설치 및 모델 경고가 현재 프로젝트의 llm-rules 설치 상태와 정확히 맞는지 실제 파일·설치기·Pi 설정 기준으로 판정한다.
+
+- [x] 1. Pi 지원 설치 경로·규칙 탐색 동작 확인 — 설치기와 Pi v0.85.1 로컬 문서가 전역 지침을 `~/.pi/agent/AGENTS.md`, 전문 사본을 `~/.pi/agent/llm-rules/`에 두는 계약임을 확인. Skill은 이름·설명만 시작 컨텍스트에 넣고 전문은 필요 시 읽음
+- [x] 2. 현재 사용자 환경 상태 점검 — `~/.pi/agent/AGENTS.md`와 `llm-rules/`는 없음. Pi는 `~/AGENTS.md`를 읽었으며, 해당 파일의 모든 `@~/.Codex/convention/*.md` 참조 경로도 없음. 전역 `~/.agents/skills/`의 llm-rules Skill 10개는 존재. 모델 저장소에 모델 항목이 없고 시작 로그도 모델 미연결을 확인
+- [x] 3. 결과 통합·최소 검증 — Pi 시작 로그·설치기·공식 로컬 문서·파일 메타데이터를 대조해 Skills 발견만 정상이고 현재 규칙 설치와 모델 실행은 미완료로 판정
+
+기준 문서: `docs/convention/ai-process.md` · `docs/agents-core.md` · Pi 설치기/문서와 현재 사용자 파일 메타데이터.
+
+---
+
 ## 작업: workflow 규칙·모델 라우팅·초기 컨텍스트 경량화 (완료)
 
 사용자 요청 — 현재 상태를 `v1` 브랜치로 보존하고, 일반 commit·push 규칙은 변경하지 않은 채 workflow 선택 게이트의 재개·플랫폼 호환성을 보강하고 Codex 모델을 작업 난도에 따라 배정하며 SessionStart 초기 주입량을 줄인다.

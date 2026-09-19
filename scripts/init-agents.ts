@@ -34,6 +34,8 @@ import { mkdir, copyFile, readdir } from 'node:fs/promises'
 
 const BEGIN = '<!-- BEGIN: llm-rules (managed by llm-rules/scripts/init-agents.ts) -->'
 const END = '<!-- END: llm-rules -->'
+const LEGACY_HOME_BEGIN = '<!-- BEGIN: rules-convention (managed by rules/scripts/sync-Codex-md.ts) -->'
+const LEGACY_HOME_END = '<!-- END: rules-convention -->'
 const DIR_TOKEN = '{{LLM_RULES_DIR}}'
 const CODEX_DOC_LIMIT = 32 * 1024
 
@@ -137,6 +139,16 @@ const applyBlock = (orig: string, block: string) => {
     return orig.replace(/\s*$/, '') + '\n\n' + block + '\n'
 }
 
+const removeLegacyHomeBlock = (orig: string) => {
+    const beginIndex = orig.indexOf(LEGACY_HOME_BEGIN)
+    const endIndex = orig.indexOf(LEGACY_HOME_END)
+    if (beginIndex === -1 || endIndex === -1 || endIndex <= beginIndex) return orig
+
+    const before = orig.slice(0, beginIndex).replace(/\s*$/, '')
+    const after = orig.slice(endIndex + LEGACY_HOME_END.length).replace(/^\s*/, '')
+    return [before, after].filter(Boolean).join('\n\n')
+}
+
 const writeAgentsMd = async (agentsPath: string, docsDir: string, label: string) => {
     const block = buildBlock(docsDir)
     const blockBytes = Buffer.byteLength(block, 'utf-8')
@@ -171,6 +183,25 @@ const copyDocs = async (docsDirPath: string, label: string) => {
     log(`✅ ${label}: 전문 ${docFiles.length}개 복사 완료 → ${docsDirPath}`)
 }
 
+const migrateLegacyPiHomeAgentsMd = async () => {
+    const legacyAgentsPath = join(homedir(), 'AGENTS.md')
+    if (!(await Bun.file(legacyAgentsPath).exists())) return
+
+    const orig = await Bun.file(legacyAgentsPath).text()
+    const next = removeLegacyHomeBlock(orig)
+    if (next === orig) return
+    if (opts.dryRun) {
+        log(`  (dry-run) Pi 구형 홈 AGENTS 관리 블록 제거 예정: ${legacyAgentsPath}`)
+        return
+    }
+    if (opts.backup) {
+        await copyFile(legacyAgentsPath, `${legacyAgentsPath}.bak`)
+        log(`🗄  백업 생성: ${legacyAgentsPath}.bak`)
+    }
+    await Bun.write(legacyAgentsPath, next)
+    log(`✅ Pi 구형 홈 AGENTS 관리 블록 제거 완료: ${legacyAgentsPath}`)
+}
+
 log('')
 log(`소스   : ${srcConventionDir} (전문 ${docFiles.length}개) + ${srcCorePath} (코어)`)
 
@@ -182,6 +213,7 @@ try {
             log(`\n▶ 글로벌: ${agent} (${base})`)
             await writeAgentsMd(join(base, 'AGENTS.md'), docsDir, `${agent} AGENTS.md`)
             await copyDocs(docsDir, `${agent} llm-rules/`)
+            if (agent === 'pi') await migrateLegacyPiHomeAgentsMd()
         }
     } else {
         log(`대상   : ${opts.target}`)

@@ -41,6 +41,8 @@ Claude Code 전용 자산은 기존 구조를 유지하고 Codex 자산은 별�
 
 Codex, opencode, pi에는 `AGENTS.md` 압축 코어와 전문 사본을 설치하고 Cursor에는 always-on rule을 설치합니다. 이 공통 코어에는 새 chat/task/session, reopen/resume, clear/reset, compact/summarize, handoff/process를 같은 workflow 선택 경계로 취급하는 규칙이 포함됩니다. opencode·pi·Cursor는 이 저장소가 별도 SessionStart hook을 설치하지 않으므로 룰 파일과 재개 프롬프트가 질문을 수행합니다. Copilot·Windsurf는 각 제품의 룰 파일에서 `docs/convention/`을 직접 참조해야 합니다. Codex 전체 네이티브 기능이 필요하면 위의 Codex 전용 설치기를 사용합니다.
 
+Pi 전역 설치는 `~/.pi/agent/AGENTS.md`와 `~/.pi/agent/llm-rules/`를 생성하고, 예전 설치가 남긴 `~/AGENTS.md`의 `rules-convention` 관리 블록만 백업 후 제거합니다. 사용자 소유 내용은 유지합니다.
+
 ```bash
 cd /path/to/project
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/init-agents.sh)"
