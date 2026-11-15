@@ -1,5 +1,7 @@
 # workflow 선택 게이트 합의
 
+> 2026-11-15 대체됨: 질문 게이트를 없애고 명시적 opt-in 으로 전환했다. `docs/acknowledge/2026-11-15-provider-optimization-audit.md` 결정 1.
+
 ## 배경
 
 기존 규칙은 도구를 사용하는 모든 실행 작업에 다중 에이전트 workflow를 강제했다. 사용자는 작업 성격과 세션 상황에 따라 workflow 사용 여부를 직접 선택하고, handoff나 `PROCESS.md`를 통해 새 세션에서 이어갈 때도 과거 선택이 자동 승계되지 않기를 요청했다.

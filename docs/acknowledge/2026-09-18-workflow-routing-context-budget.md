@@ -1,5 +1,7 @@
 # workflow 모델 라우팅·컨텍스트 예산 합의
 
+> 2026-11-15 일부 대체됨: 모델 배정은 공식 기준으로 갱신하고 룰에는 모델 이름만 적는다. `docs/acknowledge/2026-11-15-provider-optimization-audit.md` 결정 3.
+
 ## 결정
 
 - 일반 commit·push의 자율 실행, main 전담, 하위 에이전트 금지, force push 금지 규칙은 변경하지 않는다.
