@@ -5,7 +5,7 @@ description: 변경된 TypeScript·JavaScript 코드의 llm-rules 컨벤션 위�
 
 # 컨벤션 감사
 
-사용자가 지정한 경로가 있으면 그 범위를, 없으면 스테이지·워킹트리·미추적 변경 전체를 대상으로 합니다. `docs/convention/common.md`, `comments.md`, `frontend.md`, `backend.md`, `security.md`를 먼저 읽습니다.
+사용자가 지정한 경로가 있으면 그 범위를, 없으면 스테이지·워킹트리·미추적 변경 전체를 대상으로 합니다. `{{LLM_RULES_DIR}}/common.md`, `comments.md`, `frontend.md`, `backend.md`, `security.md`를 먼저 읽습니다.
 
 1. `git diff --name-only HEAD`, `git diff --name-only --cached`, `git ls-files --others --exclude-standard`로 변경 파일을 모으고 중복을 제거합니다. `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mts`, `*.cts`만 검사합니다.
 2. `package.json`과 lockfile을 확인해 프로젝트의 `typecheck` 스크립트 또는 로컬 `tsc --noEmit`을 실행합니다.

@@ -1,33 +1,47 @@
 #!/usr/bin/env bun
 
 import { homedir } from 'node:os'
-import { resolve, dirname, join } from 'node:path'
-import { mkdir, copyFile, cp, rm, readdir, chmod } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { mkdir } from 'node:fs/promises'
+import {
+    backupFile,
+    buildManagedBlock,
+    copyRenderedFiles,
+    copySkillDirectories,
+    createArgs,
+    createAsk,
+    die,
+    isRecord,
+    log,
+    parseJsonObject,
+    readTextIfExists,
+    removeFiles,
+    replaceTokens,
+    selectItems,
+    warn,
+    writeManagedInstructions,
+    type InstallOptions,
+} from './lib/install-kit'
 
-const BEGIN = '<!-- BEGIN: llm-rules (managed by llm-rules/scripts/install-codex.ts) -->'
-const LEGACY_BEGIN = '<!-- BEGIN: llm-rules (managed by llm-rules/scripts/init-agents.ts) -->'
-const END = '<!-- END: llm-rules -->'
-const DIR_TOKEN = '{{LLM_RULES_DIR}}'
-const HOOKS_DIR_TOKEN = '{{HOOKS_DIR}}'
+const ALL_ITEMS = ['instructions', 'config', 'hooks', 'skills', 'agents', 'rules'] as const
+const DEFAULT_MODEL_SLUGS = { sol: 'gpt-6.1-sol', luna: 'gpt-6-luna' }
 const CODEX_DOC_LIMIT_BYTES = 32 * 1024
-const CODEX_DOC_WARNING_MARGIN_BYTES = 2 * 1024
-const EXECUTABLE_MODE = 0o755
+const CODEX_DOC_WARNING_BYTES = 16 * 1024
+const CORE_FILE = 'core.md'
+const HOOKS_DIR_TOKEN = '{{HOOKS_DIR}}'
+const CURRENT_HOOK_SCRIPTS = ['scan-secrets.sh', 'lint-edit.sh', 'session-context.sh']
+const RETIRED_HOOK_SCRIPTS = ['reinject-rules.sh', 'verify-on-stop.sh', 'guard-commit.sh', 'guard-push.sh']
+const LEGACY_MAIN_MODEL_PATTERN = /^\s*model\s*=\s*"gpt-5\.6-sol"\s*$/
+const LEGACY_MAIN_EFFORT_PATTERN = /^\s*model_reasoning_effort\s*=\s*"high"\s*$/
+const TOML_TABLE_HEADER_PATTERN = /^[\t ]*(?:\[[^\]\r\n]+\]|\[\[[^\]\r\n]+\]\])[\t ]*(?:#.*)?\r?$/m
+const TOML_AGENTS_HEADER_PATTERN = /^[\t ]*\[agents\][\t ]*(?:#.*)?\r?$/m
 const HOME_DIR = homedir()
-const argv = process.argv.slice(2)
+const ASSETS_DIR = resolve(import.meta.dir, '../docs/codex/assets')
+const RULES_SOURCE_DIR = resolve(import.meta.dir, '../docs/codex/rules')
 
-const log = (...values: unknown[]) => console.log(...values)
-const warn = (...values: unknown[]) => console.warn('경고:', ...values)
-const die = (message: string): never => {
-    console.error(`오류: ${message}`)
-    process.exit(1)
-}
-const has = (flag: string) => argv.includes(flag)
-const getOption = (name: string) => {
-    const index = argv.indexOf(name)
-    return index === -1 ? undefined : argv[index + 1]
-}
+const args = createArgs(process.argv.slice(2))
 
-if (has('--help') || has('-h')) {
+if (args.has('--help') || args.has('-h')) {
     log(
         [
             'Codex 전용 설치 CLI',
@@ -35,343 +49,222 @@ if (has('--help') || has('-h')) {
             '사용법: bun run install-codex [위치] [항목] [옵션]',
             '',
             '위치: --global | --project | --target <dir>',
-            '항목: --all | --instructions | --config | --hooks | --skills | --agents | --rules',
+            `항목: --all | ${ALL_ITEMS.map((item) => `--${item}`).join(' | ')}`,
+            `모델: --sol-model <slug> (기본 ${DEFAULT_MODEL_SLUGS.sol}) --luna-model <slug> (기본 ${DEFAULT_MODEL_SLUGS.luna})`,
             '옵션: --dry-run --yes/-y --no-backup --help/-h',
-            '',
-            '예: bun run install-codex --global --all',
-            '    bun run install-codex --project --config --hooks --skills --agents --rules',
         ].join('\n'),
     )
     process.exit(0)
 }
 
-const options = {
-    dryRun: has('--dry-run'),
-    yes: has('--yes') || has('-y'),
-    backup: !has('--no-backup'),
-}
-
-const assetsDir = resolve(import.meta.dir, '../docs/codex/assets')
-const conventionDir = resolve(import.meta.dir, '../docs/convention')
-const corePath = resolve(import.meta.dir, '../docs/agents-core.md')
-const hooksTemplatePath = join(assetsDir, 'hooks.json')
-const configTemplatePath = join(assetsDir, 'config.toml')
-
-for (const requiredPath of [join(conventionDir, 'index.md'), corePath, hooksTemplatePath, configTemplatePath]) {
+for (const requiredPath of [join(RULES_SOURCE_DIR, CORE_FILE), join(ASSETS_DIR, 'hooks.json'), join(ASSETS_DIR, 'config.toml')]) {
     if (!(await Bun.file(requiredPath).exists())) die(`필수 자산을 찾을 수 없습니다: ${requiredPath}`)
 }
 
-const ask = (question: string, fallback: string) => {
-    if (options.yes || !process.stdin.isTTY) return fallback
-    return (prompt(question) ?? '').trim() || fallback
-}
+const options: InstallOptions = { isDryRun: args.has('--dry-run'), shouldBackup: !args.has('--no-backup') }
+const ask = createAsk(args.has('--yes') || args.has('-y'))
 
-type Location = {
-    kind: 'global' | 'project'
-    rootDir: string
-    codexDir: string
-    skillsDir: string
-}
-
-const resolveLocation = (): Location => {
-    const target = getOption('--target')
-    if (target) {
-        const rootDir = resolve(target)
-        return { kind: 'project', rootDir, codexDir: join(rootDir, '.codex'), skillsDir: join(rootDir, '.agents', 'skills') }
+const resolveLocation = () => {
+    const globalLocation = {
+        isGlobal: true,
+        rootDir: join(HOME_DIR, '.codex'),
+        codexDir: join(HOME_DIR, '.codex'),
+        skillsDir: join(HOME_DIR, '.agents', 'skills'),
     }
-    if (has('--project')) {
-        const rootDir = resolve(process.cwd())
-        return { kind: 'project', rootDir, codexDir: join(rootDir, '.codex'), skillsDir: join(rootDir, '.agents', 'skills') }
-    }
-    if (has('--global'))
-        return {
-            kind: 'global',
-            rootDir: join(HOME_DIR, '.codex'),
-            codexDir: join(HOME_DIR, '.codex'),
-            skillsDir: join(HOME_DIR, '.agents', 'skills'),
-        }
-    const choice = ask('설치 위치 [1] 글로벌 [2] 프로젝트, 기본 1: ', '1')
-    if (choice === '2') {
-        const rootDir = resolve(process.cwd())
-        return { kind: 'project', rootDir, codexDir: join(rootDir, '.codex'), skillsDir: join(rootDir, '.agents', 'skills') }
-    }
-    return { kind: 'global', rootDir: join(HOME_DIR, '.codex'), codexDir: join(HOME_DIR, '.codex'), skillsDir: join(HOME_DIR, '.agents', 'skills') }
-}
-
-const ALL_ITEMS = ['instructions', 'config', 'hooks', 'skills', 'agents', 'rules'] as const
-type Item = (typeof ALL_ITEMS)[number]
-
-const resolveItems = () => {
-    if (has('--all')) return [...ALL_ITEMS]
-    const flagged = ALL_ITEMS.filter((item) => has(`--${item}`))
-    if (flagged.length > 0) return flagged
-    log('설치 항목:')
-    log('  1) instructions: AGENTS.md 코어와 컨벤션 전문')
-    log('  2) config: main·subagent 모델과 동시 실행 기본값')
-    log('  3) hooks: Codex lifecycle hook 3종')
-    log('  4) skills: 반복 워크플로 10종')
-    log('  5) agents: worker 4종과 reviewer 7종')
-    log('  6) rules: Git·삭제·검증 Execpolicy')
-    const selection = ask('쉼표로 선택하거나 a로 전체 설치, 기본 a: ', 'a')
-    if (/^a/i.test(selection)) return [...ALL_ITEMS]
-    const itemByNumber: Record<string, Item> = { '1': 'instructions', '2': 'config', '3': 'hooks', '4': 'skills', '5': 'agents', '6': 'rules' }
-    return [
-        ...new Set(
-            selection
-                .split(',')
-                .map((value) => itemByNumber[value.trim()])
-                .filter((value): value is Item => value !== undefined),
-        ),
-    ]
+    const toProjectLocation = (rootDir: string) => ({
+        isGlobal: false,
+        rootDir,
+        codexDir: join(rootDir, '.codex'),
+        skillsDir: join(rootDir, '.agents', 'skills'),
+    })
+    const target = args.get('--target')
+    if (target) return toProjectLocation(resolve(target))
+    if (args.has('--project')) return toProjectLocation(resolve(process.cwd()))
+    if (args.has('--global')) return globalLocation
+    return ask('설치 위치 [1] 글로벌 [2] 프로젝트, 기본 1: ', '1') === '2' ? toProjectLocation(resolve(process.cwd())) : globalLocation
 }
 
 const location = resolveLocation()
-const items = resolveItems()
+const items = selectItems(ALL_ITEMS, args, ask)
 if (items.length === 0) die('선택된 설치 항목이 없습니다.')
 
-const docOrder = ['index', 'ai-process', 'common', 'comments', 'security', 'git', 'frontend', 'fsd', 'query', 'backend', 'desktop']
-const orderOf = (file: string) => {
-    const index = docOrder.indexOf(file.replace(/\.md$/, ''))
-    return index === -1 ? docOrder.length : index
-}
-const docFiles = (await readdir(conventionDir))
-    .filter((file) => file.endsWith('.md'))
-    .sort((left, right) => orderOf(left) - orderOf(right) || left.localeCompare(right))
-const core = (await Bun.file(corePath).text()).trim()
-
-const applyManagedBlock = (original: string, block: string) => {
-    const beginMarker = original.includes(BEGIN) ? BEGIN : LEGACY_BEGIN
-    const beginIndex = original.indexOf(beginMarker)
-    const endIndex = original.indexOf(END)
-    if (beginIndex !== -1 && endIndex > beginIndex) {
-        const before = original.slice(0, beginIndex).trimEnd()
-        const after = original.slice(endIndex + END.length).trimStart()
-        return [before, block, after].filter(Boolean).join('\n\n') + '\n'
-    }
-    if (original.trim() === '') return `${block}\n`
-    return `${original.trimEnd()}\n\n${block}\n`
+const referenceDir = location.isGlobal ? join(location.codexDir, 'llm-rules') : join(location.rootDir, '.llm-rules')
+const tokens = {
+    LLM_RULES_DIR: location.isGlobal ? '~/.codex/llm-rules' : '.llm-rules',
+    MODEL_SOL: args.get('--sol-model') ?? DEFAULT_MODEL_SLUGS.sol,
+    MODEL_LUNA: args.get('--luna-model') ?? DEFAULT_MODEL_SLUGS.luna,
 }
 
 const installInstructions = async () => {
-    const agentsPath = location.kind === 'global' ? join(location.codexDir, 'AGENTS.md') : join(location.rootDir, 'AGENTS.md')
-    const installedDocsDir = location.kind === 'global' ? join(location.codexDir, 'llm-rules') : join(location.rootDir, '.llm-rules')
-    const modelDocsDir = location.kind === 'global' ? installedDocsDir : '.llm-rules'
-    const intro = '# 코딩 컨벤션 (LLM Rules)\n\n> 이 블록은 install-codex가 관리합니다. §0 참조 프로토콜에 따라 전문 문서를 읽습니다.'
-    const block = [BEGIN, intro, core.replaceAll(DIR_TOKEN, modelDocsDir), END].join('\n\n')
-    const blockSize = Buffer.byteLength(block, 'utf8')
-    if (blockSize > CODEX_DOC_LIMIT_BYTES - CODEX_DOC_WARNING_MARGIN_BYTES)
-        warn(`AGENTS.md 코어가 Codex 기본 한도에 근접했습니다: ${blockSize} bytes`)
-
-    const original = (await Bun.file(agentsPath).exists()) ? await Bun.file(agentsPath).text() : ''
-    const next = applyManagedBlock(original, block)
-    if (options.dryRun) {
-        log(`instructions: ${agentsPath}와 전문 ${docFiles.length}개 설치 예정`)
-        return
+    const agentsPath = location.isGlobal ? join(location.codexDir, 'AGENTS.md') : join(location.rootDir, 'AGENTS.md')
+    const block = buildManagedBlock('install-codex.ts', replaceTokens(await Bun.file(join(RULES_SOURCE_DIR, CORE_FILE)).text(), tokens))
+    const blockBytes = Buffer.byteLength(block, 'utf8')
+    if (blockBytes > CODEX_DOC_WARNING_BYTES) {
+        warn(`AGENTS.md 코어가 ${blockBytes} bytes 입니다. Codex 는 전역과 프로젝트 파일 합산 ${CODEX_DOC_LIMIT_BYTES} bytes 에서 읽기를 멈춥니다.`)
     }
-    await mkdir(dirname(agentsPath), { recursive: true })
-    await mkdir(installedDocsDir, { recursive: true })
-    if (options.backup && original && next !== original) await copyFile(agentsPath, `${agentsPath}.bak`)
-    if (next !== original) await Bun.write(agentsPath, next)
-    await Promise.all(docFiles.map((file) => copyFile(join(conventionDir, file), join(installedDocsDir, file))))
-    log(`instructions: ${agentsPath}, 전문 ${docFiles.length}개 설치`)
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
-const parseJsonObject = (text: string, path: string) => {
-    const value: unknown = JSON.parse(text)
-    if (!isRecord(value)) die(`${path}의 최상위 값이 JSON 객체가 아닙니다.`)
-    return value
-}
-const getHooksRecord = (value: Record<string, unknown>, path: string) => {
-    if (value.hooks === undefined) return {}
-    if (!isRecord(value.hooks)) die(`${path}의 hooks가 JSON 객체가 아닙니다.`)
-    for (const [event, entries] of Object.entries(value.hooks)) {
-        if (!Array.isArray(entries) || !entries.every(isRecord)) die(`${path}의 hooks.${event}가 객체 배열이 아닙니다.`)
-    }
-    return value.hooks
-}
-const CURRENT_HOOK_SCRIPTS = ['scan-secrets.sh', 'lint-edit.sh', 'session-context.sh']
-const RETIRED_HOOK_SCRIPTS = ['reinject-rules.sh', 'verify-on-stop.sh', 'guard-commit.sh', 'guard-push.sh']
-const MANAGED_HOOK_SCRIPTS = [...CURRENT_HOOK_SCRIPTS, ...RETIRED_HOOK_SCRIPTS]
-const isManagedHookHandler = (handler: unknown) =>
-    isRecord(handler) &&
-    typeof handler.command === 'string' &&
-    MANAGED_HOOK_SCRIPTS.some((file) => new RegExp(`/hooks/llm-rules/${file.replace('.', '\\.')}(["'\\s]|$)`).test(handler.command))
-const pruneManagedHookEntry = (entry: unknown) => {
-    if (!isRecord(entry) || !Array.isArray(entry.hooks)) return entry
-    const hooks = entry.hooks.filter((handler) => !isManagedHookHandler(handler))
-    if (hooks.length === 0) return undefined
-    return { ...entry, hooks }
-}
-const AGENT_CONFIG_KEYS = ['enabled', 'default_subagent_model', 'default_subagent_reasoning_effort', 'max_concurrent_threads_per_session']
-const AGENT_CONFIG_LINES = [
-    'enabled = true',
-    'default_subagent_model = "gpt-5.6-terra"',
-    'default_subagent_reasoning_effort = "medium"',
-    'max_concurrent_threads_per_session = 4',
-]
-
-const removeLegacyManagedMainDefaults = (source: string) => {
-    const lines = source.split('\n')
-    const hasManagedModel = lines.some((line) => /^\s*model\s*=\s*"gpt-5\.6-sol"\s*$/.test(line))
-    const hasManagedEffort = lines.some((line) => /^\s*model_reasoning_effort\s*=\s*"high"\s*$/.test(line))
-    if (!hasManagedModel || !hasManagedEffort) return source
-    return lines
-        .filter(
-            (line) =>
-                !/^\s*model\s*=\s*"gpt-5\.6-sol"\s*$/.test(line) &&
-                !/^\s*model_reasoning_effort\s*=\s*"high"\s*$/.test(line),
-        )
-        .join('\n')
-}
-
-const removeTomlAssignments = (source: string, keys: string[]) =>
-    source
-        .split('\n')
-        .filter((line) => !keys.some((key) => new RegExp(`^\\s*${key}\\s*=`).test(line)))
-        .join('\n')
-
-const mergeManagedConfig = (original: string) => {
-    const tableHeader = /^[\t ]*(?:\[[^\]\r\n]+\]|\[\[[^\]\r\n]+\]\])[\t ]*(?:#.*)?\r?$/m
-    const firstTableIndex = original.search(tableHeader)
-    const rootSection = firstTableIndex === -1 ? original : original.slice(0, firstTableIndex)
-    const tableSections = firstTableIndex === -1 ? '' : original.slice(firstTableIndex)
-    const root = removeLegacyManagedMainDefaults(rootSection)
-    const agentHeader = /^[\t ]*\[agents\][\t ]*(?:#.*)?\r?$/m
-    const agentMatch = agentHeader.exec(tableSections)
-    const preservedRoot = root.trim()
-
-    if (agentMatch === null || agentMatch.index === undefined) {
-        return `${preservedRoot}${preservedRoot && tableSections ? '\n\n' : ''}${tableSections.trim()}${preservedRoot || tableSections ? '\n\n' : ''}[agents]\n${AGENT_CONFIG_LINES.join('\n')}\n`
-    }
-
-    const agentStart = agentMatch.index
-    const agentHeaderEnd = agentStart + agentMatch[0].length
-    const followingTable = tableSections.slice(agentHeaderEnd).search(tableHeader)
-    const agentEnd = followingTable === -1 ? tableSections.length : agentHeaderEnd + followingTable
-    const beforeAgent = tableSections.slice(0, agentStart)
-    const currentAgentHeader = tableSections.slice(agentStart, agentHeaderEnd)
-    const currentAgentBody = tableSections.slice(agentHeaderEnd, agentEnd)
-    const afterAgent = tableSections.slice(agentEnd)
-    const mergedAgentBody = removeTomlAssignments(currentAgentBody, AGENT_CONFIG_KEYS).trim()
-    const agentSection = [currentAgentHeader, AGENT_CONFIG_LINES.join('\n'), mergedAgentBody].filter(Boolean).join('\n')
-
-    return `${preservedRoot}${preservedRoot ? '\n\n' : ''}${beforeAgent.trimEnd()}${beforeAgent.trim() ? '\n' : ''}${agentSection}${afterAgent ? `\n${afterAgent.trim()}` : ''}\n`
+    await writeManagedInstructions(agentsPath, block, options, 'instructions')
+    await copyRenderedFiles({
+        sourceDir: RULES_SOURCE_DIR,
+        targetDir: referenceDir,
+        extension: '.md',
+        label: 'reference',
+        options,
+        tokens,
+        shouldResetTarget: true,
+        excludedFiles: [CORE_FILE],
+    })
 }
 
 const validateToml = (source: string, path: string) => {
     try {
         Bun.TOML.parse(source)
     } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error)
-        die(`${path}의 TOML 형식이 올바르지 않습니다: ${detail}`)
+        die(`${path} 의 TOML 형식이 올바르지 않습니다: ${error instanceof Error ? error.message : String(error)}`)
     }
+}
+
+const removeLegacyManagedMainDefaults = (source: string) => {
+    const lines = source.split('\n')
+    const hasLegacyPair = lines.some((line) => LEGACY_MAIN_MODEL_PATTERN.test(line)) && lines.some((line) => LEGACY_MAIN_EFFORT_PATTERN.test(line))
+    if (!hasLegacyPair) return source
+    return lines.filter((line) => !LEGACY_MAIN_MODEL_PATTERN.test(line) && !LEGACY_MAIN_EFFORT_PATTERN.test(line)).join('\n')
+}
+
+const mergeManagedConfig = (original: string, managedLines: string[]) => {
+    const managedKeys = managedLines.map((line) => line.split('=')[0].trim())
+    const firstTableIndex = original.search(TOML_TABLE_HEADER_PATTERN)
+    const rootSection = firstTableIndex === -1 ? original : original.slice(0, firstTableIndex)
+    const tableSections = firstTableIndex === -1 ? '' : original.slice(firstTableIndex)
+    const preservedRoot = removeLegacyManagedMainDefaults(rootSection).trim()
+    const agentMatch = TOML_AGENTS_HEADER_PATTERN.exec(tableSections)
+
+    if (!agentMatch) {
+        const preserved = [preservedRoot, tableSections.trim()].filter(Boolean).join('\n\n')
+        return `${preserved}${preserved ? '\n\n' : ''}[agents]\n${managedLines.join('\n')}\n`
+    }
+
+    const agentStart = agentMatch.index
+    const agentHeaderEnd = agentStart + agentMatch[0].length
+    const followingTable = tableSections.slice(agentHeaderEnd).search(TOML_TABLE_HEADER_PATTERN)
+    const agentEnd = followingTable === -1 ? tableSections.length : agentHeaderEnd + followingTable
+    const beforeAgent = tableSections.slice(0, agentStart)
+    const afterAgent = tableSections.slice(agentEnd)
+    const keptAgentBody = tableSections
+        .slice(agentHeaderEnd, agentEnd)
+        .split('\n')
+        .filter((line) => !managedKeys.some((key) => new RegExp(`^\\s*${key}\\s*=`).test(line)))
+        .join('\n')
+        .trim()
+    const agentSection = [tableSections.slice(agentStart, agentHeaderEnd), managedLines.join('\n'), keptAgentBody].filter(Boolean).join('\n')
+
+    const rootPrefix = preservedRoot ? `${preservedRoot}\n\n` : ''
+    const beforePrefix = beforeAgent.trim() ? `${beforeAgent.trimEnd()}\n` : ''
+    const afterSuffix = afterAgent ? `\n${afterAgent.trim()}` : ''
+    return `${rootPrefix}${beforePrefix}${agentSection}${afterSuffix}\n`
 }
 
 const installConfig = async () => {
     const configPath = join(location.codexDir, 'config.toml')
-    const template = await Bun.file(configTemplatePath).text()
-    validateToml(template, configTemplatePath)
-    const exists = await Bun.file(configPath).exists()
-    const original = exists ? await Bun.file(configPath).text() : ''
+    const template = replaceTokens(await Bun.file(join(ASSETS_DIR, 'config.toml')).text(), tokens)
+    validateToml(template, 'config.toml 템플릿')
+    const managedLines = template.split('\n').filter((line) => line.includes('='))
+    const original = await readTextIfExists(configPath)
     if (original) validateToml(original, configPath)
-    const next = mergeManagedConfig(original)
+    const next = mergeManagedConfig(original, managedLines)
     validateToml(next, configPath)
-
-    if (options.dryRun) {
-        log(`config: ${configPath}의 workflow agent 기본값 병합 예정`)
+    if (options.isDryRun) {
+        log(`config: ${configPath} 의 [agents] 관리 키 병합 예정`)
+        return
+    }
+    if (next === original) {
+        log('config: 이미 최신')
         return
     }
     await mkdir(location.codexDir, { recursive: true })
-    if (options.backup && exists && next !== original) await copyFile(configPath, `${configPath}.bak`)
-    if (next !== original) await Bun.write(configPath, next)
-    log(`config: ${configPath}의 workflow agent 관리 키 병합`)
+    await backupFile(configPath, options)
+    await Bun.write(configPath, next)
+    log(`config: ${configPath}`)
 }
 
-const copyHookScripts = async () => {
-    const sourceDir = join(assetsDir, 'hooks')
-    const destinationDir = join(location.codexDir, 'hooks', 'llm-rules')
-    const files = (await readdir(sourceDir)).filter((file) => file.endsWith('.sh'))
-    if (options.dryRun) {
-        log(`hooks: 스크립트 ${files.length}개 설치, retired script ${RETIRED_HOOK_SCRIPTS.length}개와 관리 hook entry 정리 예정`)
-        return
-    }
-    await mkdir(destinationDir, { recursive: true })
-    await Promise.all(RETIRED_HOOK_SCRIPTS.map((file) => rm(join(destinationDir, file), { force: true })))
-    for (const file of files) {
-        const destination = join(destinationDir, file)
-        await copyFile(join(sourceDir, file), destination)
-        await chmod(destination, EXECUTABLE_MODE)
-    }
+const isManagedHookHandler = (handler: unknown) =>
+    isRecord(handler) &&
+    typeof handler.command === 'string' &&
+    [...CURRENT_HOOK_SCRIPTS, ...RETIRED_HOOK_SCRIPTS].some((file) =>
+        new RegExp(`/hooks/llm-rules/${file.replace('.', '\\.')}(["'\\s]|$)`).test(String(handler.command)),
+    )
+
+const pruneManagedHookEntry = (entry: unknown) => {
+    if (!isRecord(entry) || !Array.isArray(entry.hooks)) return entry
+    const hooks = entry.hooks.filter((handler) => !isManagedHookHandler(handler))
+    return hooks.length > 0 ? { ...entry, hooks } : undefined
+}
+
+const installHooks = async () => {
+    const scriptsDir = join(location.codexDir, 'hooks', 'llm-rules')
+    await copyRenderedFiles({
+        sourceDir: join(ASSETS_DIR, 'hooks'),
+        targetDir: scriptsDir,
+        extension: '.sh',
+        label: 'hooks',
+        options,
+        isExecutable: true,
+    })
+    if (options.isDryRun) return
+    await removeFiles(scriptsDir, RETIRED_HOOK_SCRIPTS, options)
 
     const hooksPath = join(location.codexDir, 'hooks.json')
-    const exists = await Bun.file(hooksPath).exists()
-    const current = exists ? parseJsonObject(await Bun.file(hooksPath).text(), hooksPath) : {}
-    const currentHooks = getHooksRecord(current, hooksPath)
-    const template = parseJsonObject(await Bun.file(hooksTemplatePath).text(), hooksTemplatePath)
-    const hookBase = location.kind === 'global' ? '$HOME/.codex/hooks/llm-rules' : '$(git rev-parse --show-toplevel)/.codex/hooks/llm-rules'
-    const rendered = parseJsonObject(JSON.stringify(template).replaceAll(HOOKS_DIR_TOKEN, hookBase), hooksTemplatePath)
-    const renderedHooks = getHooksRecord(rendered, hooksTemplatePath)
-
-    for (const [event, entries] of Object.entries(currentHooks)) {
-        if (!Array.isArray(entries)) continue
-        const preserved = entries.map(pruneManagedHookEntry).filter((entry) => entry !== undefined)
-        if (preserved.length === 0) delete currentHooks[event]
-        else currentHooks[event] = preserved
-    }
-
-    for (const [event, entries] of Object.entries(renderedHooks)) {
-        if (!Array.isArray(entries) || !entries.every(isRecord)) die(`${hooksTemplatePath}의 hooks.${event}가 객체 배열이 아닙니다.`)
-        const preserved = currentHooks[event]
-        currentHooks[event] = [...(Array.isArray(preserved) ? preserved : []), ...entries]
-    }
-    current.hooks = currentHooks
-    if (current.description === undefined) current.description = rendered.description
-    if (options.backup && exists) await copyFile(hooksPath, `${hooksPath}.bak`)
-    await Bun.write(hooksPath, `${JSON.stringify(current, null, 2)}\n`)
-    log(`hooks: 스크립트 ${files.length}개 설치, hooks.json 병합`)
+    const hookBase = location.isGlobal ? '$HOME/.codex/hooks/llm-rules' : '$(git rev-parse --show-toplevel)/.codex/hooks/llm-rules'
+    const templateText = (await Bun.file(join(ASSETS_DIR, 'hooks.json')).text()).replaceAll(HOOKS_DIR_TOKEN, hookBase)
+    const template = parseJsonObject(templateText, 'hooks.json 템플릿')
+    const currentText = await readTextIfExists(hooksPath)
+    const current = currentText ? parseJsonObject(currentText, hooksPath) : {}
+    const currentHooks = isRecord(current.hooks) ? current.hooks : {}
+    const templateHooks = isRecord(template.hooks) ? template.hooks : {}
+    const events = [...new Set([...Object.keys(currentHooks), ...Object.keys(templateHooks)])]
+    const mergedHooks = Object.fromEntries(
+        events
+            .map((event) => {
+                const kept = (Array.isArray(currentHooks[event]) ? currentHooks[event] : [])
+                    .map(pruneManagedHookEntry)
+                    .filter((entry) => entry !== undefined)
+                const added = Array.isArray(templateHooks[event]) ? templateHooks[event] : []
+                return [event, [...kept, ...added]] as const
+            })
+            .filter(([, entries]) => entries.length > 0),
+    )
+    const nextText = `${JSON.stringify({ ...current, description: current.description ?? template.description, hooks: mergedHooks }, null, 2)}\n`
+    if (nextText === currentText) return
+    await backupFile(hooksPath, options)
+    await Bun.write(hooksPath, nextText)
+    log(`hooks: ${hooksPath} 병합`)
 }
 
-const copyDirectories = async (sourceDir: string, destinationDir: string, label: string) => {
-    const directories = (await readdir(sourceDir, { withFileTypes: true })).filter((entry) => entry.isDirectory())
-    if (options.dryRun) {
-        log(`${label}: ${directories.length}개를 ${destinationDir}에 설치 예정`)
-        return
-    }
-    await mkdir(destinationDir, { recursive: true })
-    for (const directory of directories) {
-        const destination = join(destinationDir, directory.name)
-        await rm(destination, { recursive: true, force: true })
-        await cp(join(sourceDir, directory.name), destination, { recursive: true })
-    }
-    log(`${label}: ${directories.length}개 설치`)
-}
-
-const copyFiles = async (sourceDir: string, destinationDir: string, extension: string, label: string) => {
-    const files = (await readdir(sourceDir)).filter((file) => file.endsWith(extension))
-    if (options.dryRun) {
-        log(`${label}: ${files.length}개를 ${destinationDir}에 설치 예정`)
-        return
-    }
-    await mkdir(destinationDir, { recursive: true })
-    await Promise.all(files.map((file) => copyFile(join(sourceDir, file), join(destinationDir, file))))
-    log(`${label}: ${files.length}개 설치`)
-}
-
-log(`위치: ${location.kind} (${location.codexDir})`)
+log(`위치: ${location.isGlobal ? 'global' : 'project'} (${location.codexDir})`)
 log(`항목: ${items.join(', ')}`)
-if (options.dryRun) log('dry-run: 파일을 수정하지 않습니다.')
+if (options.isDryRun) log('dry-run: 파일을 수정하지 않습니다.')
 
 if (items.includes('instructions')) await installInstructions()
 if (items.includes('config')) await installConfig()
-if (items.includes('hooks')) await copyHookScripts()
-if (items.includes('skills')) await copyDirectories(join(assetsDir, 'skills'), location.skillsDir, 'skills')
-if (items.includes('agents')) await copyFiles(join(assetsDir, 'agents'), join(location.codexDir, 'agents'), '.toml', 'agents')
-if (items.includes('rules')) await copyFiles(join(assetsDir, 'rules'), join(location.codexDir, 'rules'), '.rules', 'rules')
-
-if (options.dryRun) log('dry-run 완료')
-else {
-    log('Codex 설치 완료')
-    log('새 세션에서 /hooks와 /skills를 확인하고 custom agent를 요청해 동작을 확인하세요.')
-    if (items.includes('hooks')) warn('편집·세션 hook은 Codex /hooks에서 신뢰 승인 후 실행됩니다. 일반 commit·push에는 llm-rules hook이 없습니다.')
+if (items.includes('hooks')) await installHooks()
+if (items.includes('skills')) await copySkillDirectories(join(ASSETS_DIR, 'skills'), location.skillsDir, tokens, options)
+if (items.includes('agents')) {
+    await copyRenderedFiles({
+        sourceDir: join(ASSETS_DIR, 'agents'),
+        targetDir: join(location.codexDir, 'agents'),
+        extension: '.toml',
+        label: 'agents',
+        options,
+        tokens,
+    })
 }
+if (items.includes('rules')) {
+    await copyRenderedFiles({
+        sourceDir: join(ASSETS_DIR, 'rules'),
+        targetDir: join(location.codexDir, 'rules'),
+        extension: '.rules',
+        label: 'rules',
+        options,
+    })
+}
+
+log(options.isDryRun ? 'dry-run 완료' : 'Codex 설치 완료. 새 세션에서 /hooks 로 hook 을 신뢰 승인하고 /skills 를 확인하세요.')

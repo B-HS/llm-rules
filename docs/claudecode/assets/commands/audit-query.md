@@ -4,7 +4,7 @@ argument-hint: "[점검 대상 경로 (생략 시 전체)]"
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-TanStack Query 사용 규약을 점검합니다. 기준 문서는 @docs/convention/query.md 입니다. 점검 범위는 `$ARGUMENTS` (비어 있으면 저장소 전체).
+TanStack Query 사용 규약을 점검합니다. 기준 문서는 @{{RULES_DIR}}/query.md 입니다. 점검 범위는 `$ARGUMENTS` (비어 있으면 저장소 전체).
 
 먼저 기준을 인지하세요. query.md 핵심:
 - 쿼리 키는 컴포넌트에 흩지 않고 `shared` 의 `QUERY_KEY` 상수 한 곳에서 도메인별로 중앙 관리한다. 키는 항상 배열이며 도메인 → 동작 → 파라미터 계층(`['post', 'list', params]`), 파라미터 객체는 직렬화하지 않고 그대로 넣는다(v5 결정적 해싱).

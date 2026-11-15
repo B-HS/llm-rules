@@ -1,10 +1,10 @@
 ---
-description: 이번 세션의 지적·교정을 docs/feedback/ 에 날짜 기반으로 기록 (ai-process §9.1)
+description: 이번 세션의 지적·교정을 docs/feedback/ 에 날짜 기반으로 기록
 argument-hint: "[지적 요약 (생략 시 세션에서 추출)]"
 allowed-tools: Bash, Read, Write, Glob
 ---
 
-ai-process §9.1(`docs/feedback`, 원칙 21)에 따라, 이번 세션에서 사용자에게 받은 **지적·교정**을 `docs/feedback/` 에 기록한다.
+이번 세션에서 사용자에게 받은 **지적·교정**을 `docs/feedback/` 에 기록한다.
 
 `docs/feedback`은 `docs/memory`(항상 적용)와 달리 **상황에 따라 판단해 적용**하는 노트다. 무조건 적용 규칙으로 굳어지면 컨벤션 문서나 `docs/memory`로 승격한다.
 
@@ -24,10 +24,10 @@ ai-process §9.1(`docs/feedback`, 원칙 21)에 따라, 이번 세션에서 사�
 
 파일명: `docs/feedback/YYYY-MM-DD-<짧은-kebab-슬러그>.md` (날짜 prefix + 지적 핵심을 kebab-case로).
 
-각 파일에 ai-process §9.1 의 4요소를 반드시 적는다.
+각 파일에 아래 4요소를 적는다.
 
 - **무엇을 지적받았나** — 증상 / 사용자 발언(가능한 한 원문 인용)
-- **왜 틀렸나** — 근본 원인(§6.2, hack 아닌 root cause)
+- **왜 틀렸나** — 근본 원인(증상이 아니라 원인)
 - **어떻게 고치나** — 올바른 해결
 - **언제 적용하나** — 적용 조건. "이 상황에서만"을 명확히(무조건 적용이 아님)
 
@@ -39,7 +39,7 @@ ai-process §9.1(`docs/feedback`, 원칙 21)에 따라, 이번 세션에서 사�
 
 ```
 ## 승격 후보
-- 대상: docs/convention/<문서>.md  또는  docs/memory
+- 대상: {{RULES_DIR}}/<문서>.md  또는  docs/memory
 - 사유: (왜 상황 무관 보편 규칙인지)
 ```
 

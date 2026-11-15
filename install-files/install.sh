@@ -4,104 +4,53 @@ set -euo pipefail
 REPO="${LLM_RULES_REPO:-B-HS/llm-rules}"
 VERSION="${LLM_RULES_VERSION:-latest}"
 [ "$VERSION" != "latest" ] && VERSION="v${VERSION#v}"
-export CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
-export TARGET="$CLAUDE_DIR/CLAUDE.md"
-export DEST="$CLAUDE_DIR/convention"
-export MODE="${LLM_RULES_MODE:-}"
-export DOCS="index ai-process common comments security git frontend fsd query backend desktop"
+EDITION="${1:-${LLM_RULES_EDITION:-}}"
+[ $# -gt 0 ] && shift
 
-echo "▶ LLM Rules 컨벤션 설치"
-echo "  소스 : $REPO ($VERSION)"
-echo "  대상 : $TARGET"
-echo "  사본 : $DEST"
+usage() {
+    echo "사용법: bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/$REPO/main/install-files/install.sh)\" llm-rules <에디션> [설치 옵션]"
+    echo "에디션: claude-code | codex | opencode | pi"
+    echo "예: ... llm-rules codex --global --all"
+}
 
-command -v curl >/dev/null 2>&1 || { echo "✗ curl 가 필요합니다."; exit 1; }
-command -v tar >/dev/null 2>&1 || { echo "✗ tar 가 필요합니다."; exit 1; }
-command -v python3 >/dev/null 2>&1 || { echo "✗ python3 가 필요합니다."; exit 1; }
+case "$EDITION" in
+    claude-code | codex | opencode | pi) ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
 
-SRC="$(mktemp -d)"
-trap 'rm -rf "$SRC"' EXIT
-echo "▶ 번들 다운로드"
-if [ "$VERSION" = "latest" ]; then BUNDLE_URL="https://github.com/$REPO/releases/latest/download/llm-rules.tar.gz"
-else BUNDLE_URL="https://github.com/$REPO/releases/download/$VERSION/llm-rules.tar.gz"; fi
-if curl -fsSL --retry 3 "$BUNDLE_URL" 2>/dev/null | tar -xz -C "$SRC" 2>/dev/null; then
-    echo "  ✓ release 번들 ($VERSION)"
-else
-    [ "$VERSION" != "latest" ] && { echo "✗ 릴리스 $VERSION 번들을 받지 못했습니다."; exit 1; }
-    curl -fsSL --retry 3 "https://codeload.github.com/$REPO/tar.gz/refs/heads/main" | tar -xz -C "$SRC" --strip-components=1
-    echo "  ✓ main 소스 (release 없음 → 대체)"
-fi
-
-mkdir -p "$DEST"
-echo "▶ 컨벤션 문서 복사"
-for name in $DOCS; do
-    cp "$SRC/docs/convention/$name.md" "$DEST/$name.md"
-    echo "  ✓ $name.md"
+for required in curl tar bun; do
+    command -v "$required" >/dev/null 2>&1 || {
+        echo "오류: $required 가 필요합니다."
+        [ "$required" = "bun" ] && echo "Bun 설치: https://bun.sh"
+        exit 1
+    }
 done
 
-echo "▶ CLAUDE.md 갱신"
-python3 <<'PY'
-import os, re, sys, shutil
+SOURCE_DIR="$(mktemp -d)"
+trap 'rm -rf "$SOURCE_DIR"' EXIT
+INSTALLER="$SOURCE_DIR/scripts/install-$EDITION.ts"
 
-target = os.environ["TARGET"]
-mode = os.environ.get("MODE", "")
-docs = os.environ["DOCS"].split()
+if [ "$VERSION" = "latest" ]; then
+    BUNDLE_URL="https://github.com/$REPO/releases/latest/download/llm-rules.tar.gz"
+else
+    BUNDLE_URL="https://github.com/$REPO/releases/download/$VERSION/llm-rules.tar.gz"
+fi
 
-BEGIN = "<!-- BEGIN: rules-convention (managed by rules/scripts/sync-claude-md.ts) -->"
-END = "<!-- END: rules-convention -->"
-imports = "\n".join("@~/.claude/convention/%s.md" % d for d in docs)
-block = "%s\n## 코드 컨벤션\n아래 컨벤션 문서를 항상 참고하여 코드를 작성한다.\n%s\n%s" % (BEGIN, imports, END)
+curl -fsSL --retry 3 "$BUNDLE_URL" 2>/dev/null | tar -xz -C "$SOURCE_DIR" 2>/dev/null || true
+if [ ! -f "$INSTALLER" ]; then
+    [ "$VERSION" != "latest" ] && {
+        echo "오류: $VERSION 번들에 $EDITION 설치기가 없습니다."
+        exit 1
+    }
+    curl -fsSL --retry 3 "https://codeload.github.com/$REPO/tar.gz/refs/heads/main" | tar -xz -C "$SOURCE_DIR" --strip-components=1
+fi
 
-orig = ""
-if os.path.exists(target):
-    with open(target, encoding="utf-8") as f:
-        orig = f.read()
-
-def strip_legacy(s):
-    pat = re.compile(r"\n*#{1,6}[^\n]*컨벤션[^\n]*\n(?:(?!\s*#{1,6}\s)[^\n]*\n?)*?\s*@\S*convention\S*\.md[^\n]*")
-    if pat.search(s):
-        return pat.sub("", s)
-    return "\n".join(l for l in s.split("\n") if not re.search(r"@\S*convention\S*\.md", l))
-
-bi, ei = orig.find(BEGIN), orig.find(END)
-if bi != -1 and ei != -1 and ei > bi:
-    before, after = orig[:bi].rstrip(), orig[ei + len(END):].lstrip()
-    nxt = "\n\n".join(x for x in [before, block, after] if x) + "\n"
-    label = "관리 블록 갱신"
-elif orig.strip() == "":
-    nxt, label = block + "\n", "신규 생성"
-elif re.search(r"@\S*convention\S*\.md|코드\s*컨벤션|컨벤션", orig):
-    choice = mode
-    if choice not in ("add", "replace"):
-        sys.stderr.write("\n────────── 기존 CLAUDE.md ──────────\n%s\n────────────────────────────────────\n" % orig.rstrip())
-        try:
-            tty = open("/dev/tty")
-            sys.stderr.write("이미 컨벤션 내용이 있습니다.  [a] 추가(기존 보존) / [r] 교체 / [c] 취소  (기본 a): ")
-            sys.stderr.flush()
-            ans = tty.readline().strip().lower()
-        except Exception:
-            ans = "a"
-        choice = {"r": "replace", "c": "cancel", "a": "add"}.get(ans, "add")
-    if choice == "cancel":
-        sys.stderr.write("취소했습니다. CLAUDE.md 변경 없음.\n")
-        raise SystemExit(0)
-    base = (strip_legacy(orig) if choice == "replace" else orig).rstrip()
-    nxt = (base + "\n\n" if base else "") + block + "\n"
-    label = "교체" if choice == "replace" else "추가"
-else:
-    nxt = orig.rstrip() + "\n\n" + block + "\n"
-    label = "기존 보존 + 추가"
-
-if nxt != orig:
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-    if os.path.exists(target):
-        shutil.copyfile(target, target + ".bak")
-        sys.stderr.write("  🗄  백업: %s.bak\n" % target)
-    with open(target, "w", encoding="utf-8") as f:
-        f.write(nxt)
-    sys.stderr.write("  ✓ CLAUDE.md %s\n" % label)
-else:
-    sys.stderr.write("  ✓ CLAUDE.md 이미 최신 (변경 없음)\n")
-PY
-
-echo "✓ 설치 완료 — ~/.claude/CLAUDE.md 가 컨벤션($(echo $DOCS | wc -w | tr -d ' ')개 문서)을 참조합니다."
+echo "llm-rules $EDITION 에디션 설치 ($REPO $VERSION)"
+if [ -r /dev/tty ]; then
+    bun run "$INSTALLER" "$@" </dev/tty
+else
+    bun run "$INSTALLER" "$@"
+fi

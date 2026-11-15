@@ -5,7 +5,7 @@ description: Hono·Drizzle 백엔드의 특정 도메인을 route, service, dto,
 
 # 백엔드 도메인 감사
 
-사용자가 지정한 도메인명을 대상으로 `docs/convention/backend.md`, `common.md`, `security.md`를 먼저 읽습니다. 도메인명이 없으면 한 줄로 질문하고 멈춥니다.
+사용자가 지정한 도메인명을 대상으로 `{{LLM_RULES_DIR}}/backend.md`, `common.md`, `security.md`를 먼저 읽습니다. 도메인명이 없으면 한 줄로 질문하고 멈춥니다.
 
 1. route, service/domain, dto, compose에서 해당 도메인 파일을 찾고 실제 내용을 읽어 결손을 판정합니다.
 2. Service가 `createXxxService(deps)` Factory DI와 `ReturnType` 유도를 쓰는지, HTTP·Drizzle을 모르는지, 없음은 `null`로 반환하는지 확인합니다.

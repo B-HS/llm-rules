@@ -42,7 +42,7 @@ while IFS= read -r file; do
         esac
     fi
     printf '%s' "$content" | grep -Eq '^[[:space:]]*function[[:space:]]|=[[:space:]]*function[[:space:]]*\(' && soft+=("$file: common §3.1 arrow function 사용")
-    printf '%s' "$content" | grep -Eq '\b(HACK|FIXME|XXX|TODO)\b|@ts-ignore|eslint-disable' && soft+=("$file: ai-process §6.2 임시 우회·검사 억제 금지")
+    printf '%s' "$content" | grep -Eq '\b(HACK|FIXME|XXX|TODO)\b|@ts-ignore|eslint-disable' && soft+=("$file: 임시 우회·검사 억제 대신 근본 원인 해결")
     printf '%s' "$content" | grep -Eq '\bdangerouslySetInnerHTML\b' && ! printf '%s' "$content" | grep -Eiq 'sanitize|DOMPurify' && soft+=("$file: security §4 sanitize 없는 HTML 주입 금지")
 done <<< "$files"
 

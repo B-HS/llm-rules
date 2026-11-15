@@ -4,7 +4,7 @@ argument-hint: "[경로 또는 비우면 변경분 전체]"
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-당신은 llm-rules 컨벤션(`~/.claude/convention/*.md`)을 기준으로 변경된 코드의 위반을 종합 점검합니다. 한국어·존댓말·간결하게, 자축 톤 없이 사실만 보고하세요.
+당신은 llm-rules 컨벤션(`{{RULES_DIR}}/*.md`)을 기준으로 변경된 코드의 위반을 종합 점검합니다. 한국어·존댓말·간결하게, 자축 톤 없이 사실만 보고하세요.
 
 ## 0. 점검 대상 산정
 
@@ -38,7 +38,7 @@ allowed-tools: Bash, Read, Grep, Glob
 - `export default` — common §6: named export 기본. 단 `*page.tsx *layout.tsx *route.ts app/ pages/` 는 허용(제외).
 - `function` 키워드 — common §3.1: arrow function 사용. 정규식 `^[[:space:]]*function[[:space:]]|=[[:space:]]*function[[:space:]]*\(`.
 - 코드 주석(`//` 한 줄, `/* */` 블록, JSX/CSS 주석) — comments §1: 주석 금지(JSDoc `/** */` 만 예외). JSDoc 이 있는 파일은 그 라인을 오탐 처리하지 말고 구분하세요.
-- `HACK` / `FIXME` / `XXX` / `TODO` / `@ts-ignore` / `eslint-disable` — ai-process §6.2: 근본 해결하거나 docs/ 에 기록.
+- `HACK` / `FIXME` / `XXX` / `TODO` / `@ts-ignore` / `eslint-disable` — 근본 원인 해결 원칙: 근본 해결하거나 docs/ 에 기록.
 - `dangerouslySetInnerHTML` 인데 `sanitize`/`DOMPurify` 없음 — security §4.
 
 > grep 은 위치 파악 보조용입니다. HARD/SOFT 모두 변경 파일을 직접 Read 통독으로 검증한 뒤 분류하세요. 테스트의 `next/image` 목 `<img>`, `p-1` 같은 리터럴, JSDoc 라인 등 알려진 오탐을 걸러냅니다.

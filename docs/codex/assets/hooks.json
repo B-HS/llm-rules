@@ -29,13 +29,13 @@
         ],
         "SessionStart": [
             {
-                "matcher": "startup|resume|clear|compact",
+                "matcher": "startup|resume|clear|compact|fork",
                 "hooks": [
                     {
                         "type": "command",
                         "command": "bash \"{{HOOKS_DIR}}/session-context.sh\"",
                         "timeout": 15,
-                        "statusMessage": "llm-rules 컨텍스트 로드",
+                        "statusMessage": "진행 중인 작업 확인",
                         "additionalContextLimit": 4000
                     }
                 ]

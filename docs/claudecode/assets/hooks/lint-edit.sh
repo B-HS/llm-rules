@@ -46,7 +46,7 @@ printf '%s' "$content" | grep -Eq '^\s*export default' && case "$file" in
 esac
 printf '%s' "$content" | grep -Eq '^[[:space:]]*function[[:space:]]|=[[:space:]]*function[[:space:]]*\(' && soft+=("common §3.1: function 키워드 대신 arrow function 을 쓰세요.")
 printf '%s' "$content" | grep -Eq '(^|[^:])//[^/]|/\*[^*]' && ! printf '%s' "$content" | grep -Eq '/\*\*' && soft+=("comments §1: 코드 주석 금지(JSDoc 만 예외). 설명은 docs/ 로.")
-printf '%s' "$content" | grep -Eq '\b(HACK|FIXME|XXX|TODO)\b|@ts-ignore|eslint-disable' && soft+=("ai-process §6.2: HACK/FIXME/@ts-ignore/eslint-disable — 근본 해결하거나 docs/ 에 기록.")
+printf '%s' "$content" | grep -Eq '\b(HACK|FIXME|XXX|TODO)\b|@ts-ignore|eslint-disable' && soft+=("근본 원인 해결 원칙: HACK/FIXME/@ts-ignore/eslint-disable — 근본 해결하거나 docs/ 에 기록.")
 printf '%s' "$content" | grep -Eq '\bdangerouslySetInnerHTML\b' && ! printf '%s' "$content" | grep -Eiq 'sanitize|DOMPurify' && soft+=("security §4: dangerouslySetInnerHTML 은 sanitize(DOMPurify) 와 함께만.")
 
 esc() { printf '%s' "$1" | jq -Rs .; }

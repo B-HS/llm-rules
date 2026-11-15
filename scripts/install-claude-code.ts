@@ -1,289 +1,251 @@
 #!/usr/bin/env bun
-/**
- * install-claude-code.ts — Claude Code 전용 설치 메뉴
- *
- * 목적
- *   docs/claudecode/assets 의 Claude Code 기능(settings.json hooks+permissions,
- *   hook 스크립트, slash commands, workflow subagents, output-style)을 ~/.claude(글로벌) 또는
- *   프로젝트 .claude 에 설치한다. 컨벤션 prose 설치(sync-claude-md.ts)와는 분리된다.
- *
- * 사용
- *   bun run install-claude-code               대화형 메뉴 (위치 + 항목 선택)
- *   bun run install-claude-code --global --all 비대화형 전체 설치(글로벌)
- *   bun run install-claude-code --project --hooks --settings
- *
- * 옵션
- *   --global | --project | --target <dir>   설치 위치 (기본: 대화형, 비대화형이면 --global)
- *   --all                                    모든 항목 설치
- *   --settings --hooks --commands --agents --output-style   개별 항목
- *   --dry-run        변경 미리보기 (파일 미수정)
- *   --yes, -y        프롬프트 기본값 자동 응답
- *   --no-backup      settings.json .bak 백업 생략
- *   --help, -h       도움말
- *
- * 멱등성
- *   settings.json 은 비파괴 병합한다(.bak 백업). 재실행 시 llm-rules hook 항목은
- *   command 경로 마커(/hooks/llm-rules/)로 식별해 교체하고, permissions 는 합집합으로 dedupe.
- */
 
 import { homedir } from 'node:os'
-import { resolve, dirname, join } from 'node:path'
-import { mkdir, copyFile, cp, rm, readdir, chmod } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { mkdir, rm } from 'node:fs/promises'
+import {
+    backupFile,
+    copyRenderedFiles,
+    createArgs,
+    createAsk,
+    die,
+    isRecord,
+    log,
+    parseJsonObject,
+    pathExists,
+    readTextIfExists,
+    removeFiles,
+    removeMarkedBlock,
+    replaceTokens,
+    selectItems,
+    warn,
+    type InstallOptions,
+} from './lib/install-kit'
 
-const HOME = homedir()
-const log = (...a: unknown[]) => console.log(...a)
-const warn = (...a: unknown[]) => console.warn('⚠️ ', ...a)
-const die = (m: string): never => {
-    console.error(`❌ ${m}`)
-    process.exit(1)
-}
+const ALL_ITEMS = ['rules', 'settings', 'hooks', 'commands', 'agents', 'output-style'] as const
+const PERMISSION_KINDS = ['allow', 'ask', 'deny'] as const
+const OUTPUT_STYLE_NAME = 'llm-rules'
+const HOOK_PATH_MARKER = '/hooks/llm-rules/'
+const TEMPLATE_HOOK_BASE = '$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules'
+const RETIRED_HOOK_FILES = ['guard-commit.sh', 'guard-push.sh', 'reinject-rules.sh', 'verify-on-stop.sh']
+const CURRENT_HOOK_FILES = ['lint-edit.sh', 'scan-secrets.sh', 'session-context.sh']
+const MIGRATED_GIT_ASK_PERMISSIONS = ['Bash(git commit:*)', 'Bash(git push:*)']
+const ROOT_COMMAND_FILES = ['prepare-new.md']
+const LEGACY_IMPORT_BLOCK_BEGIN = '<!-- BEGIN: rules-convention (managed by rules/scripts/sync-claude-md.ts) -->'
+const LEGACY_IMPORT_BLOCK_END = '<!-- END: rules-convention -->'
+const LEGACY_CONVENTION_MARKER_FILES = ['index.md', 'ai-process.md']
+const HOME_DIR = homedir()
+const ASSETS_DIR = resolve(import.meta.dir, '../docs/claudecode/assets')
+const RULES_SOURCE_DIR = resolve(import.meta.dir, '../docs/claudecode/rules')
 
-const argv = process.argv.slice(2)
-const has = (f: string) => argv.includes(f)
-const getOpt = (n: string) => {
-    const i = argv.indexOf(n)
-    return i !== -1 ? argv[i + 1] : undefined
-}
+const args = createArgs(process.argv.slice(2))
 
-if (has('--help') || has('-h')) {
+if (args.has('--help') || args.has('-h')) {
     log(
         [
-            'Claude Code 전용 설치 메뉴',
+            'Claude Code 전용 설치 CLI',
             '',
             '사용법: bun run install-claude-code [위치] [항목] [옵션]',
             '',
-            '위치  : --global(기본/비대화형) | --project | --target <dir>',
-            '항목  : --all | --settings | --hooks | --commands | --agents | --output-style',
-            '옵션  : --dry-run  --yes/-y  --no-backup  --help/-h',
-            '',
-            '예) bun run install-claude-code --global --all',
-            '    bun run install-claude-code --project --hooks --settings',
+            '위치: --global | --project | --target <dir>',
+            `항목: --all | ${ALL_ITEMS.map((item) => `--${item}`).join(' | ')}`,
+            '옵션: --dry-run --yes/-y --no-backup --help/-h',
         ].join('\n'),
     )
     process.exit(0)
 }
 
-const opts = {
-    dryRun: has('--dry-run'),
-    yes: has('--yes') || has('-y'),
-    backup: !has('--no-backup'),
+if (!(await Bun.file(join(ASSETS_DIR, 'settings.json')).exists())) die(`자산을 찾을 수 없습니다: ${ASSETS_DIR}`)
+
+const options: InstallOptions = { isDryRun: args.has('--dry-run'), shouldBackup: !args.has('--no-backup') }
+const ask = createAsk(args.has('--yes') || args.has('-y'))
+
+const resolveLocation = () => {
+    const target = args.get('--target')
+    if (target) return { isGlobal: false, claudeDir: resolve(target, '.claude') }
+    if (args.has('--project')) return { isGlobal: false, claudeDir: resolve(process.cwd(), '.claude') }
+    if (args.has('--global')) return { isGlobal: true, claudeDir: join(HOME_DIR, '.claude') }
+    const choice = ask('설치 위치 [1] 글로벌(~/.claude) [2] 프로젝트(./.claude), 기본 1: ', '1')
+    return choice === '2'
+        ? { isGlobal: false, claudeDir: resolve(process.cwd(), '.claude') }
+        : { isGlobal: true, claudeDir: join(HOME_DIR, '.claude') }
 }
 
-const ASSETS = resolve(import.meta.dir, '../docs/claudecode/assets')
-if (!(await Bun.file(join(ASSETS, 'settings.json')).exists())) {
-    die(`자산을 찾을 수 없습니다: ${ASSETS}\n   llm-rules 레포 구조를 확인하세요.`)
-}
+const location = resolveLocation()
+const items = selectItems(ALL_ITEMS, args, ask)
+if (items.length === 0) die('선택된 설치 항목이 없습니다.')
 
-// --- 프롬프트 ---
-const isTTY = process.stdin.isTTY
-const ask = (q: string, fallback: string): string => {
-    if (opts.yes || !isTTY) return fallback
-    const a = prompt(q)
-    return (a ?? '').trim() || fallback
-}
+const rulesDir = join(location.claudeDir, 'rules', 'llm-rules')
+const hooksDir = join(location.claudeDir, 'hooks', 'llm-rules')
+const tokens = { RULES_DIR: location.isGlobal ? '~/.claude/rules/llm-rules' : '.claude/rules/llm-rules' }
+const hookCommandBase = location.isGlobal ? '$HOME/.claude/hooks/llm-rules' : TEMPLATE_HOOK_BASE
 
-// --- 1. 설치 위치 ---
-type Loc = { kind: 'global' | 'project'; claudeDir: string }
-const resolveLocation = (): Loc => {
-    const target = getOpt('--target')
-    if (target) return { kind: 'project', claudeDir: resolve(target, '.claude') }
-    if (has('--global')) return { kind: 'global', claudeDir: resolve(HOME, '.claude') }
-    if (has('--project')) return { kind: 'project', claudeDir: resolve(process.cwd(), '.claude') }
-    const c = ask('설치 위치?  [1] 글로벌(~/.claude)  [2] 프로젝트(./.claude)  (기본 1): ', '1')
-    return c === '2' ? { kind: 'project', claudeDir: resolve(process.cwd(), '.claude') } : { kind: 'global', claudeDir: resolve(HOME, '.claude') }
-}
-const loc = resolveLocation()
+const toStringArray = (value: unknown) => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [])
 
-// --- 2. 설치 항목 ---
-const ALL_ITEMS = ['settings', 'hooks', 'commands', 'agents', 'output-style'] as const
-type Item = (typeof ALL_ITEMS)[number]
-const flagged = ALL_ITEMS.filter((i) => has(`--${i}`))
-let items: Item[]
-if (has('--all')) items = [...ALL_ITEMS]
-else if (flagged.length) items = flagged
-else {
-    log('설치 항목 (쉼표로 다중 선택, a=전체):')
-    log('  1) settings.json (hooks + permissions 병합)')
-    log('  2) hooks 스크립트 (3종)')
-    log('  3) slash commands (/llm-rules:*)')
-    log('  4) subagents (workflow 작업자 + 리뷰어)')
-    log('  5) output-style (한국어·존댓말)')
-    const sel = ask('선택 (기본 a): ', 'a')
-    if (/^a/i.test(sel)) items = [...ALL_ITEMS]
-    else {
-        const map: Record<string, Item> = { '1': 'settings', '2': 'hooks', '3': 'commands', '4': 'agents', '5': 'output-style' }
-        items = [
-            ...new Set(
-                sel
-                    .split(',')
-                    .map((s) => map[s.trim()])
-                    .filter(Boolean) as Item[],
-            ),
-        ]
+const migrateLegacyConvention = async () => {
+    const claudeMdPath = join(location.claudeDir, 'CLAUDE.md')
+    const original = await readTextIfExists(claudeMdPath)
+    const next = removeMarkedBlock(original, LEGACY_IMPORT_BLOCK_BEGIN, LEGACY_IMPORT_BLOCK_END)
+    const conventionDir = join(location.claudeDir, 'convention')
+    const markerChecks = await Promise.all(LEGACY_CONVENTION_MARKER_FILES.map((file) => pathExists(join(conventionDir, file))))
+    const hasLegacyConventionDir = markerChecks.every(Boolean)
+
+    if (next !== original) {
+        if (options.isDryRun) log(`migration: ${claudeMdPath} 의 구형 @import 블록 제거 예정`)
+        else {
+            await backupFile(claudeMdPath, options)
+            if (next === '') await rm(claudeMdPath, { force: true })
+            else await Bun.write(claudeMdPath, next)
+            log(`migration: ${claudeMdPath} 의 구형 @import 블록 제거`)
+        }
+    }
+    if (hasLegacyConventionDir) {
+        if (options.isDryRun) log(`migration: ${conventionDir} 제거 예정`)
+        else {
+            await rm(conventionDir, { recursive: true, force: true })
+            log(`migration: ${conventionDir} 제거`)
+        }
     }
 }
-if (!items.length) die('선택된 항목이 없습니다.')
-// settings 는 hooks 경로를 참조하므로 hooks 도 함께 깐다(없으면 경고).
-if (items.includes('settings') && !items.includes('hooks'))
-    warn('settings 만 선택했습니다. hooks 스크립트가 없으면 hook 이 동작하지 않습니다. (--hooks 권장)')
 
-const HOOKS_DEST = join(loc.claudeDir, 'hooks', 'llm-rules')
-const RETIRED_HOOK_FILES = ['guard-commit.sh', 'guard-push.sh', 'reinject-rules.sh', 'verify-on-stop.sh']
-const MANAGED_HOOK_FILES = new Set([...RETIRED_HOOK_FILES, 'lint-edit.sh', 'scan-secrets.sh', 'session-context.sh'])
-const MIGRATED_GIT_ASK_PERMISSIONS = new Set(['Bash(git commit:*)', 'Bash(git push:*)'])
-const COMMANDS_DEST = join(loc.claudeDir, 'commands', 'llm-rules')
-const ROOT_COMMANDS = ['prepare-new.md']
-const ROOT_COMMANDS_DEST = join(loc.claudeDir, 'commands')
-const AGENTS_DEST = join(loc.claudeDir, 'agents')
-const OUTPUT_DEST = join(loc.claudeDir, 'output-styles')
-const SETTINGS_PATH = join(loc.claudeDir, 'settings.json')
-// hook command 경로: 글로벌은 절대($HOME), 프로젝트는 $CLAUDE_PROJECT_DIR 기준.
-const hookCmdBase = loc.kind === 'global' ? `$HOME/.claude/hooks/llm-rules` : `$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules`
-
-log('')
-log(`위치   : ${loc.kind} → ${loc.claudeDir}`)
-log(`항목   : ${items.join(', ')}`)
-log(`자산   : ${ASSETS}`)
-if (opts.dryRun) log('(dry-run: 파일을 수정하지 않습니다)')
-
-// --- settings.json 병합 ---
-const MARK = '/hooks/llm-rules/'
-const uniq = (a: string[]) => [...new Set(a)]
-const pruneManagedHooks = (entry: unknown) => {
-    if (!entry || typeof entry !== 'object') return entry
-    const hooks = Reflect.get(entry, 'hooks')
-    if (!Array.isArray(hooks)) return entry
-    const remainingHooks = hooks.filter((hook) => {
-        if (!hook || typeof hook !== 'object') return true
-        const command = Reflect.get(hook, 'command')
-        if (typeof command !== 'string' || !command.includes(MARK)) return true
-        const hookFile = command.split('/').at(-1) ?? ''
-        return !MANAGED_HOOK_FILES.has(hookFile)
+const installRules = async () => {
+    await copyRenderedFiles({
+        sourceDir: RULES_SOURCE_DIR,
+        targetDir: rulesDir,
+        extension: '.md',
+        label: 'rules',
+        options,
+        tokens,
+        shouldResetTarget: true,
     })
-    if (!remainingHooks.length) return undefined
-    return Object.assign({}, entry, { hooks: remainingHooks })
+    await migrateLegacyConvention()
 }
 
-const mergeSettings = async () => {
-    const tmpl = JSON.parse(await Bun.file(join(ASSETS, 'settings.json')).text())
-    // 템플릿 hook command 경로를 설치 위치에 맞게 치환
-    const ourHooks = JSON.parse(JSON.stringify(tmpl.hooks).replaceAll('$CLAUDE_PROJECT_DIR/.claude/hooks/llm-rules', hookCmdBase))
+const installHooks = async () => {
+    await copyRenderedFiles({
+        sourceDir: join(ASSETS_DIR, 'hooks'),
+        targetDir: hooksDir,
+        extension: '.sh',
+        label: 'hooks',
+        options,
+        isExecutable: true,
+    })
+    await removeFiles(hooksDir, RETIRED_HOOK_FILES, options)
+}
 
-    let cur: any = {}
-    const exists = await Bun.file(SETTINGS_PATH).exists()
-    if (exists) {
-        try {
-            cur = JSON.parse(await Bun.file(SETTINGS_PATH).text())
-        } catch {
-            die(`${SETTINGS_PATH} 가 유효한 JSON 이 아닙니다. 수동 확인 후 다시 실행하세요. (안전을 위해 중단)`)
-        }
+const installCommands = async () => {
+    const sourceDir = join(ASSETS_DIR, 'commands')
+    const namespacedDir = join(location.claudeDir, 'commands', 'llm-rules')
+    await copyRenderedFiles({ sourceDir, targetDir: namespacedDir, extension: '.md', label: 'commands', options, tokens, shouldResetTarget: true })
+    if (options.isDryRun) return
+    await removeFiles(namespacedDir, ROOT_COMMAND_FILES, options)
+    for (const file of ROOT_COMMAND_FILES) {
+        await Bun.write(join(location.claudeDir, 'commands', file), replaceTokens(await Bun.file(join(sourceDir, file)).text(), tokens))
     }
+}
 
-    // permissions: 합집합 dedupe
-    cur.permissions ??= {}
-    for (const k of ['allow', 'ask', 'deny'] as const) {
-        const current = (cur.permissions[k] ?? []).filter((permission: string) => k !== 'ask' || !MIGRATED_GIT_ASK_PERMISSIONS.has(permission))
-        const merged = uniq([...current, ...((tmpl.permissions?.[k] as string[]) ?? [])])
-        if (merged.length) cur.permissions[k] = merged
-        else delete cur.permissions[k]
+const isManagedHookHandler = (handler: unknown) => {
+    if (!isRecord(handler) || typeof handler.command !== 'string' || !handler.command.includes(HOOK_PATH_MARKER)) return false
+    const fileName = handler.command.split('/').at(-1) ?? ''
+    return [...RETIRED_HOOK_FILES, ...CURRENT_HOOK_FILES].some((file) => fileName.startsWith(file))
+}
+
+const pruneManagedHooks = (entry: unknown) => {
+    if (!isRecord(entry) || !Array.isArray(entry.hooks)) return entry
+    const hooks = entry.hooks.filter((handler) => !isManagedHookHandler(handler))
+    return hooks.length > 0 ? { ...entry, hooks } : undefined
+}
+
+const mergePermissions = (current: unknown, template: unknown) => {
+    const currentPermissions = isRecord(current) ? current : {}
+    const templatePermissions = isRecord(template) ? template : {}
+    const merged = PERMISSION_KINDS.map((kind) => {
+        const kept = toStringArray(currentPermissions[kind]).filter(
+            (permission) => kind !== 'ask' || !MIGRATED_GIT_ASK_PERMISSIONS.includes(permission),
+        )
+        return [kind, [...new Set([...kept, ...toStringArray(templatePermissions[kind])])]] as const
+    })
+    const withoutManagedKinds = Object.fromEntries(
+        Object.entries(currentPermissions).filter(([key]) => !PERMISSION_KINDS.some((kind) => kind === key)),
+    )
+    return { ...withoutManagedKinds, ...Object.fromEntries(merged.filter(([, list]) => list.length > 0)) }
+}
+
+const mergeHooks = (current: unknown, template: unknown) => {
+    const currentHooks = isRecord(current) ? current : {}
+    const templateHooks = isRecord(template) ? template : {}
+    const events = [...new Set([...Object.keys(currentHooks), ...Object.keys(templateHooks)])]
+    const merged = events.map((event) => {
+        const kept = (Array.isArray(currentHooks[event]) ? currentHooks[event] : []).map(pruneManagedHooks).filter((entry) => entry !== undefined)
+        const added = Array.isArray(templateHooks[event]) ? templateHooks[event] : []
+        return [event, [...kept, ...added]] as const
+    })
+    return Object.fromEntries(merged.filter(([, entries]) => entries.length > 0))
+}
+
+const installSettings = async () => {
+    const settingsPath = join(location.claudeDir, 'settings.json')
+    const templateText = (await Bun.file(join(ASSETS_DIR, 'settings.json')).text()).replaceAll(TEMPLATE_HOOK_BASE, hookCommandBase)
+    const template = parseJsonObject(templateText, 'settings.json 템플릿')
+    const currentText = await readTextIfExists(settingsPath)
+    const current = currentText ? parseJsonObject(currentText, settingsPath) : {}
+    const hasOtherOutputStyle = typeof current.outputStyle === 'string' && current.outputStyle !== OUTPUT_STYLE_NAME
+    if (hasOtherOutputStyle)
+        warn(
+            `outputStyle 이 "${String(current.outputStyle)}" 로 설정되어 있어 유지합니다. 응답 형식 규칙은 /output-style ${OUTPUT_STYLE_NAME} 에서 적용됩니다.`,
+        )
+
+    const next = {
+        ...current,
+        model: template.model,
+        effortLevel: template.effortLevel,
+        outputStyle: hasOtherOutputStyle ? current.outputStyle : OUTPUT_STYLE_NAME,
+        attribution: template.attribution,
+        permissions: mergePermissions(current.permissions, template.permissions),
+        hooks: mergeHooks(current.hooks, template.hooks),
     }
-
-    cur.model = tmpl.model
-    cur.effortLevel = tmpl.effortLevel
-
-    cur.hooks ??= {}
-    const events = new Set([...Object.keys(cur.hooks), ...Object.keys(ourHooks)])
-    for (const event of events) {
-        const existing = (Array.isArray(cur.hooks[event]) ? cur.hooks[event] : [])
-            .map(pruneManagedHooks)
-            .filter((entry: unknown) => entry !== undefined)
-        if (event in ourHooks) {
-            cur.hooks[event] = [...existing, ...ourHooks[event]]
-            continue
-        }
-        if (existing.length) cur.hooks[event] = existing
-        else delete cur.hooks[event]
-    }
-
-    const next = JSON.stringify(cur, null, 2) + '\n'
-    if (opts.dryRun) {
-        log('\n────────── (dry-run) settings.json ──────────')
-        log(next)
-        log('─────────────────────────────────────────────')
+    const nextText = `${JSON.stringify(next, null, 2)}\n`
+    if (options.isDryRun) {
+        log(`settings: ${settingsPath} 병합 예정`)
         return
     }
-    await mkdir(dirname(SETTINGS_PATH), { recursive: true })
-    if (opts.backup && exists) {
-        await copyFile(SETTINGS_PATH, `${SETTINGS_PATH}.bak`)
-        log(`🗄  백업: ${SETTINGS_PATH}.bak`)
-    }
-    await Bun.write(SETTINGS_PATH, next)
-    log(`✅ settings.json 병합: ${SETTINGS_PATH}`)
-}
-
-const copyTree = async (src: string, dest: string, label: string, exec = false, skip: string[] = []) => {
-    const files = (await readdir(src)).filter((f) => !f.startsWith('.') && !skip.includes(f))
-    if (opts.dryRun) {
-        log(`\n(dry-run) ${label}: ${files.length}개 → ${dest}`)
-        files.forEach((f) => log(`  • ${f}`))
+    if (nextText === currentText) {
+        log('settings: 이미 최신')
         return
     }
-    await rm(dest, { recursive: true, force: true })
-    await mkdir(dest, { recursive: true })
-    for (const f of files) {
-        await cp(join(src, f), join(dest, f))
-        if (exec) await chmod(join(dest, f), 0o755)
-    }
-    log(`✅ ${label}: ${files.length}개 → ${dest}`)
+    await mkdir(location.claudeDir, { recursive: true })
+    await backupFile(settingsPath, options)
+    await Bun.write(settingsPath, nextText)
+    log(`settings: ${settingsPath}`)
 }
 
-const copyHooks = async () => {
-    const src = join(ASSETS, 'hooks')
-    const files = (await readdir(src)).filter((file) => !file.startsWith('.'))
-    if (opts.dryRun) {
-        log(`\n(dry-run) hooks 스크립트: ${files.length}개 → ${HOOKS_DEST}`)
-        files.forEach((file) => log(`  • ${file}`))
-        RETIRED_HOOK_FILES.forEach((file) => log(`  - 삭제: ${file}`))
-        return
-    }
-    await mkdir(HOOKS_DEST, { recursive: true })
-    await Promise.all(RETIRED_HOOK_FILES.map((file) => rm(join(HOOKS_DEST, file), { force: true })))
-    for (const file of files) {
-        await cp(join(src, file), join(HOOKS_DEST, file))
-        await chmod(join(HOOKS_DEST, file), 0o755)
-    }
-    log(`✅ hooks 스크립트: ${files.length}개 → ${HOOKS_DEST}`)
-}
+log(`위치: ${location.isGlobal ? 'global' : 'project'} (${location.claudeDir})`)
+log(`항목: ${items.join(', ')}`)
+if (options.isDryRun) log('dry-run: 파일을 수정하지 않습니다.')
+if (items.includes('settings') && !items.includes('hooks')) warn('settings 만 선택했습니다. hooks 항목이 없으면 hook 이 동작하지 않습니다.')
 
-// --- 실행 ---
-if (items.includes('hooks')) await copyHooks()
-if (items.includes('commands')) {
-    await copyTree(join(ASSETS, 'commands'), COMMANDS_DEST, 'slash commands', false, ROOT_COMMANDS)
-    if (opts.dryRun) ROOT_COMMANDS.forEach((f) => log(`(dry-run) slash command(root) → ${join(ROOT_COMMANDS_DEST, f)}`))
-    else {
-        await mkdir(ROOT_COMMANDS_DEST, { recursive: true })
-        for (const f of ROOT_COMMANDS) await copyFile(join(ASSETS, 'commands', f), join(ROOT_COMMANDS_DEST, f))
-        log(`✅ slash commands(root): ${ROOT_COMMANDS.length}개 → ${ROOT_COMMANDS_DEST}`)
-    }
+if (items.includes('rules')) await installRules()
+if (items.includes('hooks')) await installHooks()
+if (items.includes('commands')) await installCommands()
+if (items.includes('agents')) {
+    await copyRenderedFiles({
+        sourceDir: join(ASSETS_DIR, 'agents'),
+        targetDir: join(location.claudeDir, 'agents'),
+        extension: '.md',
+        label: 'agents',
+        options,
+        tokens,
+    })
 }
-if (items.includes('agents')) await copyTree(join(ASSETS, 'agents'), AGENTS_DEST, 'subagents')
 if (items.includes('output-style')) {
-    if (opts.dryRun) log(`\n(dry-run) output-style → ${OUTPUT_DEST}/llm-rules.md`)
-    else {
-        await mkdir(OUTPUT_DEST, { recursive: true })
-        await copyFile(join(ASSETS, 'output-styles', 'llm-rules.md'), join(OUTPUT_DEST, 'llm-rules.md'))
-        log(`✅ output-style → ${OUTPUT_DEST}/llm-rules.md  (활성화: /output-style llm-rules)`)
-    }
+    await copyRenderedFiles({
+        sourceDir: join(ASSETS_DIR, 'output-styles'),
+        targetDir: join(location.claudeDir, 'output-styles'),
+        extension: '.md',
+        label: 'output-style',
+        options,
+    })
 }
-if (items.includes('settings')) await mergeSettings()
+if (items.includes('settings')) await installSettings()
 
-log('')
-if (opts.dryRun) log('dry-run 완료. 실제 설치하려면 --dry-run 을 빼고 실행하세요.')
-else {
-    log('✓ Claude Code 설치 완료.')
-    log(`  - 적용 확인: ${loc.kind === 'global' ? '새 세션' : '이 프로젝트에서 새 세션'} 시작 후 /hooks 로 확인`)
-    if (items.includes('commands')) log('  - 슬래시 커맨드: /llm-rules:workflow · /llm-rules:audit-conventions · /prepare-new 등')
-    if (items.includes('agents')) log('  - 서브에이전트: implementation-worker · verification-worker · research-worker · reviewer')
-    if (items.includes('output-style')) log('  - 응답 스타일: /output-style llm-rules')
-    if (loc.kind === 'global') warn('글로벌 hook 은 모든 프로젝트에 적용됩니다. 특정 레포만 원하면 --project 로 설치하세요.')
-}
+log(options.isDryRun ? 'dry-run 완료' : 'Claude Code 설치 완료. 새 세션에서 /context all 과 /hooks 로 확인하세요.')

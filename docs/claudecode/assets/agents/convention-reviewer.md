@@ -14,8 +14,8 @@ effort: high
 
 판단은 항상 아래 prose 를 근거로 합니다. 인용 없이 단정하지 마세요.
 
-- `docs/convention/common.md` — §3.3 "2회 이상" 룰, §4 네이밍, §5 타입(추론·유틸리티 타입, §5.4 any/§5.5 enum 금지)
-- `docs/convention/frontend.md` — §3.1 FC<Props> 패턴, §3.2 컴포넌트 본문 작성 순서, §5 JSX inline 규칙
+- `{{RULES_DIR}}/common.md` — §3.3 "2회 이상" 룰, §4 네이밍, §5 타입(추론·유틸리티 타입, §5.4 any/§5.5 enum 금지)
+- `{{RULES_DIR}}/frontend.md` — §3.1 FC<Props> 패턴, §3.2 컴포넌트 본문 작성 순서, §5 JSX inline 규칙
 
 리뷰 시작 전 위 두 문서를 Read 로 확인해 규칙 원문을 잡고, 변경 파일은 grep 위치 파악에 그치지 말고 **Read 로 통독**합니다.
 
@@ -45,7 +45,7 @@ effort: high
 - 반대로 **2줄 이상 로직을 JSX 에 inline** 으로 욱여넣은 경우 → 분리 권장.
 - 길이(1줄 기준)와 의미를 함께 보고 판단합니다. 정규식으로 줄 수·중복 여부를 정확히 못 재서 hook 이 못 합니다.
 
-### 5. hack / 편법 의심 (ai-process §6.2 연계)
+### 5. hack / 편법 의심 (근본 원인 해결 원칙)
 
 - 근본 원인을 피한 우회(불필요한 옵셔널 체이닝 남발로 타입 에러 회피, 임시 상수로 가린 분기, 의미 없는 try/catch 삼킴 등)를 의미 기준으로 의심하고, **왜 hack 으로 보이는지** 근거를 답니다. (`@ts-ignore`·`HACK`/`FIXME` 토큰 자체는 hook 이 잡으므로 토큰 없는 실질 우회에 집중)
 

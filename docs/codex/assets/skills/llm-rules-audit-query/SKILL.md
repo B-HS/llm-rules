@@ -5,7 +5,7 @@ description: TanStack Query v5의 query key, queryOptions, invalidateQueries, st
 
 # TanStack Query 감사
 
-`docs/convention/query.md`, `frontend.md`, `fsd.md`를 먼저 읽습니다. 사용자가 범위를 지정하지 않으면 저장소 전체의 TanStack Query 사용처를 검사합니다.
+`{{LLM_RULES_DIR}}/query.md`, `frontend.md`, `fsd.md`를 먼저 읽습니다. 사용자가 범위를 지정하지 않으면 저장소 전체의 TanStack Query 사용처를 검사합니다.
 
 1. `queryKey`, `mutationKey`, `QUERY_KEY` 정의와 사용처를 찾아 키가 shared 단일 출처와 도메인·동작·파라미터 계층을 따르는지 확인합니다.
 2. 파라미터 객체를 수동 직렬화하거나 식별 파라미터를 누락하지 않았는지 확인합니다.

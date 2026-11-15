@@ -5,7 +5,7 @@ description: 완료한 작업의 결과와 검증을 llm-rules 분류 체계에 
 
 # 작업 결과 문서화
 
-`docs/convention/ai-process.md`의 결과 저장 분류를 따릅니다.
+`AGENTS.md` 의 `docs/` 분류를 따릅니다.
 
 1. 직전 작업과 `docs/PROCESS.md`를 확인해 저장할 사실을 식별합니다.
 2. 장기 지식은 `docs/memory`, 작업 이력은 `history`, 버그는 `bug`, 사용자 결정은 `acknowledge`, 도구는 `utils`, 지적은 `feedback`, 검증 체크리스트는 `quality-assurance`에 기록합니다.

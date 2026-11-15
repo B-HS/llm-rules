@@ -2,6 +2,12 @@
     "$schema": "https://json.schemastore.org/claude-code-settings.json",
     "model": "fable",
     "effortLevel": "high",
+    "outputStyle": "llm-rules",
+    "attribution": {
+        "commit": "",
+        "pr": "",
+        "sessionUrl": false
+    },
     "permissions": {
         "allow": [
             "Bash(bun:*)",

@@ -4,7 +4,7 @@ argument-hint: "[점검 대상 경로 (생략 시 src 전체)]"
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-프론트엔드 FSD 아키텍처를 점검합니다. 기준은 @docs/convention/fsd.md (§2 의존성 매트릭스, §3 SFC, §5 alias=레이어)입니다. 점검 대상은 `$ARGUMENTS`(생략 시 `src` 전체, 없으면 프로젝트 루트의 레이어 디렉토리)입니다.
+프론트엔드 FSD 아키텍처를 점검합니다. 기준은 @{{RULES_DIR}}/fsd.md (§2 의존성 매트릭스, §3 SFC, §5 alias=레이어)입니다. 점검 대상은 `$ARGUMENTS`(생략 시 `src` 전체, 없으면 프로젝트 루트의 레이어 디렉토리)입니다.
 
 다음 순서로 진행하세요. 각 단계는 grep/glob 결과를 그대로 보고하지 말고, 실제 파일을 Read 로 통독·검증한 뒤 위반/정상으로 분류합니다.
 

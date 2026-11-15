@@ -5,7 +5,7 @@ description: React·Next.js 프로젝트의 FSD 레이어 의존 방향, pages �
 
 # FSD 감사
 
-`docs/convention/fsd.md`와 `frontend.md`를 먼저 읽습니다. 사용자가 지정한 경로가 없으면 `src` 또는 프로젝트의 FSD 레이어 디렉터리를 대상으로 합니다.
+`{{LLM_RULES_DIR}}/fsd.md`와 `frontend.md`를 먼저 읽습니다. 사용자가 지정한 경로가 없으면 `src` 또는 프로젝트의 FSD 레이어 디렉터리를 대상으로 합니다.
 
 1. `app`, `pages`, `widgets`, `features`, `entities`, `shared`의 실제 위치와 Next.js App Router 여부를 확인합니다.
 2. alias와 상대 import를 함께 추적해 아래 역방향 참조를 찾습니다.

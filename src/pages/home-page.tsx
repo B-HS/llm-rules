@@ -4,50 +4,68 @@ import { Head } from 'vite-react-ssg'
 import { ArrowRight, CheckCircle, TerminalWindow } from '@phosphor-icons/react/dist/ssr'
 import { Button } from '@/components/ui/button'
 
-const CODEX_INSTALL_COMMAND = 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-codex.sh)"'
-const CLAUDE_INSTALL_COMMANDS = [
-    'bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install.sh)"',
-    'bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-claude-code.sh)"',
+const INSTALL_SCRIPT_URL = 'https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install.sh'
+const buildInstallCommand = (edition: string) => `bash -c "$(curl -fsSL ${INSTALL_SCRIPT_URL})" llm-rules ${edition} --global --all`
+
+const EDITIONS = [
+    {
+        name: 'Claude Code',
+        route: '/claude-code',
+        command: buildInstallCommand('claude-code'),
+        summary: '200줄 이하 코어와 경로 범위 규칙, output style, 커맨드, 서브에이전트, hook, settings 를 설치합니다.',
+    },
+    {
+        name: 'Codex',
+        route: '/codex',
+        command: buildInstallCommand('codex'),
+        summary: '11KB 코어와 조건부 참조 문서, Skills, Custom Agents, Hooks, Execpolicy Rules 를 설치합니다.',
+    },
+    {
+        name: 'OpenCode',
+        route: '/opencode',
+        command: buildInstallCommand('opencode'),
+        summary: 'AGENTS.md 코어와 참조 문서, Skills, Commands, Subagents, 권한 규칙, 플러그인을 설치합니다.',
+    },
+    {
+        name: 'Pi',
+        route: '/pi',
+        command: buildInstallCommand('pi'),
+        summary: 'AGENTS.md 코어와 참조 문서, Skills, 도구 호출을 지키는 Extension 을 설치합니다.',
+    },
 ]
-const SUPPORT_LAYERS = [
-    { label: '기본 지침', codex: 'AGENTS.md', claude: 'CLAUDE.md' },
-    { label: '생명주기', codex: 'Hooks', claude: 'Hooks' },
-    { label: '오케스트레이터', codex: 'Sol high / Terra medium', claude: 'Fable · high' },
-    { label: '하위 작업', codex: 'Terra medium/high · Luna low/medium, 필요 시 high/xhigh', claude: 'Sonnet high · Haiku xhigh' },
-    { label: '워크플로', codex: 'Subagent workflow', claude: 'Workflow command' },
-    { label: '명령 정책', codex: 'Execpolicy Rules', claude: 'Permissions' },
-    { label: '응답 규칙', codex: 'AGENTS.md', claude: 'Output Style' },
+
+const DELIVERY_LAYERS = [
+    { label: '상시 지침', values: ['rules/core.md', 'AGENTS.md', 'AGENTS.md', 'AGENTS.md'] },
+    { label: '도메인 규칙', values: ['경로 범위 규칙', '조건부 참조 문서', '조건부 참조 문서', '조건부 참조 문서'] },
+    { label: '반복 절차', values: ['Commands', 'Skills', 'Skills · Commands', 'Skills'] },
+    { label: '응답 형식', values: ['Output Style', 'AGENTS.md', 'AGENTS.md', 'AGENTS.md'] },
+    { label: '위임', values: ['Subagents (요청 시)', 'Custom Agents (요청 시)', 'Subagents (요청 시)', '직접 수행'] },
+    { label: '강제 계층', values: ['Hooks · Permissions', 'Hooks · Execpolicy', 'Permissions · Plugin', 'Extension'] },
 ]
 
 export const HomePage: FC = () => (
     <div className='mx-auto w-full max-w-6xl px-5 py-12 sm:px-8 sm:py-16 lg:py-20'>
         <Head>
-            <title>LLM Rules · Codex와 Claude Code 네이티브 컨벤션</title>
-            <meta name='description' content='하나의 코딩 컨벤션과 다중 에이전트 workflow를 Codex와 Claude Code에서 네이티브로 실행합니다.' />
+            <title>LLM Rules · 프로바이더별로 최적화한 코딩 에이전트 룰</title>
+            <meta
+                name='description'
+                content='같은 결과물을 내는 코딩 컨벤션을 Claude Code, Codex, OpenCode, Pi 각각의 권장사항에 맞춰 제공합니다.'
+            />
         </Head>
 
         <section className='max-w-4xl'>
             <p className='mb-5 inline-flex rounded-full border border-border bg-muted/60 px-3 py-1 font-mono text-xs font-medium text-muted-foreground'>
-                CODEX + CLAUDE CODE
+                CLAUDE CODE · CODEX · OPENCODE · PI
             </p>
             <h1 className='text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl'>
-                한 번 정의하고,
-                <br />두 에이전트에서 네이티브로 실행합니다.
+                결과물은 같게,
+                <br />
+                과정은 프로바이더에 맞게.
             </h1>
             <p className='mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg'>
-                공통 컨벤션은 하나로 유지하고 각 환경의 주 모델과 하위 모델이 구현, 리서치, 검증을 나눠 수행한 뒤 추가 승인 없이 자동으로 커밋하고
-                푸시합니다.
+                코드·문서·커밋·응답의 결과는 네 에디션이 같습니다. 지침을 싣는 방식과 작업 과정은 각 모델과 하네스의 공식 권장에 맞춰 따로
+                작성했습니다.
             </p>
-            <div className='mt-8 flex flex-wrap gap-3'>
-                <Button asChild size='lg'>
-                    <Link to='/codex'>
-                        Codex 에디션 <ArrowRight data-icon='inline-end' />
-                    </Link>
-                </Button>
-                <Button asChild variant='outline' size='lg'>
-                    <Link to='/claude-code'>Claude Code 에디션</Link>
-                </Button>
-            </div>
         </section>
 
         <section className='mt-16' aria-labelledby='quick-install'>
@@ -55,74 +73,53 @@ export const HomePage: FC = () => (
                 <div>
                     <p className='font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase'>Quick install</p>
                     <h2 id='quick-install' className='mt-2 text-2xl font-semibold tracking-tight sm:text-3xl'>
-                        환경을 선택하고 바로 설치하세요.
+                        쓰는 에이전트의 에디션을 설치하세요.
                     </h2>
                 </div>
                 <TerminalWindow className='hidden size-8 text-muted-foreground sm:block' />
             </div>
             <div className='grid gap-4 lg:grid-cols-2'>
-                <article className='flex min-w-0 flex-col rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6'>
-                    <div className='flex items-start justify-between gap-4'>
-                        <div>
-                            <p className='font-mono text-xs font-medium text-muted-foreground'>PRIMARY</p>
-                            <h3 className='mt-1 text-xl font-semibold'>Codex</h3>
-                        </div>
-                        <span className='rounded-full bg-foreground px-2.5 py-1 text-xs font-medium text-background'>1 command</span>
-                    </div>
-                    <p className='mt-4 text-sm leading-6 text-muted-foreground'>
-                        작업 난도별 Sol/Terra 오케스트레이션부터 Hooks, Subagent workflow, Terra/Luna Custom Agents, 무승인 Git Rules까지 한 번에 설치합니다.
-                    </p>
-                    <pre className='mt-5 overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-xs leading-6'>
-                        <code className='whitespace-pre-wrap break-all'>{CODEX_INSTALL_COMMAND}</code>
-                    </pre>
-                    <Link to='/codex/install' className='mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-medium hover:underline'>
-                        설치 옵션 보기 <ArrowRight />
-                    </Link>
-                </article>
-
-                <article className='flex min-w-0 flex-col rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6'>
-                    <div className='flex items-start justify-between gap-4'>
-                        <div>
-                            <p className='font-mono text-xs font-medium text-muted-foreground'>COMPATIBLE</p>
-                            <h3 className='mt-1 text-xl font-semibold'>Claude Code</h3>
-                        </div>
-                        <span className='rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium'>2 commands</span>
-                    </div>
-                    <p className='mt-4 text-sm leading-6 text-muted-foreground'>
-                        공통 컨벤션을 먼저 설치한 뒤 Fable 오케스트레이터와 Sonnet/Haiku Subagents를 기존 네이티브 레이어에 추가합니다.
-                    </p>
-                    <pre className='mt-5 overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-xs leading-6'>
-                        <code className='whitespace-pre-wrap break-all'>{CLAUDE_INSTALL_COMMANDS.join('\n')}</code>
-                    </pre>
-                    <Link to='/claude-code' className='mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-medium hover:underline'>
-                        설치 구성 보기 <ArrowRight />
-                    </Link>
-                </article>
+                {EDITIONS.map((edition) => (
+                    <article key={edition.route} className='flex min-w-0 flex-col rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6'>
+                        <h3 className='text-xl font-semibold'>{edition.name}</h3>
+                        <p className='mt-3 text-sm leading-6 text-muted-foreground'>{edition.summary}</p>
+                        <pre className='mt-5 overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-xs leading-6'>
+                            <code className='break-all whitespace-pre-wrap'>{edition.command}</code>
+                        </pre>
+                        <Link to={edition.route} className='mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-medium hover:underline'>
+                            구성과 근거 보기 <ArrowRight />
+                        </Link>
+                    </article>
+                ))}
             </div>
+            <p className='mt-4 text-sm text-muted-foreground'>
+                원격 설치에는 Bun 이 필요합니다. 저장소를 클론했다면 bun run install-&lt;에디션&gt; 을 씁니다.
+            </p>
         </section>
 
-        <section className='mt-16 rounded-2xl border border-border bg-muted/30 p-5 sm:p-8' aria-labelledby='native-support'>
+        <section className='mt-16 rounded-2xl border border-border bg-muted/30 p-5 sm:p-8' aria-labelledby='delivery-layers'>
             <div className='max-w-2xl'>
-                <p className='font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase'>Native parity</p>
-                <h2 id='native-support' className='mt-2 text-2xl font-semibold tracking-tight sm:text-3xl'>
-                    같은 규칙, 각 환경에 맞는 실행 계층
+                <p className='font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase'>Delivery</p>
+                <h2 id='delivery-layers' className='mt-2 text-2xl font-semibold tracking-tight sm:text-3xl'>
+                    같은 규칙을 싣는 서로 다른 계층
                 </h2>
                 <p className='mt-3 text-sm leading-6 text-muted-foreground'>
-                    Claude Code 자산은 기존 구조를 유지하고 Codex 자산은 별도 경로에서 병렬 관리하며, 양쪽 모두 상세 위임과 위험비례 최소 검증 후
-                    무승인 자동 Git 흐름을 적용합니다.
+                    에디션마다 룰 문서를 따로 소유합니다. 결과물이 같은지는 저장소의 동등성 테스트가 확인합니다.
                 </p>
             </div>
             <div className='mt-8 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3'>
-                {SUPPORT_LAYERS.map((layer) => (
+                {DELIVERY_LAYERS.map((layer) => (
                     <div key={layer.label} className='bg-background p-4'>
                         <p className='flex items-center gap-2 text-sm font-medium'>
                             <CheckCircle className='text-muted-foreground' /> {layer.label}
                         </p>
                         <dl className='mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs leading-5'>
-                            <dt className='text-muted-foreground'>Codex</dt>
-                            <dd className='font-mono'>{layer.codex}</dd>
-                            <dt className='text-muted-foreground'>Claude</dt>
-                            <dd className='font-mono'>{layer.claude}</dd>
+                            {EDITIONS.map((edition, index) => (
+                                <div key={edition.route} className='contents'>
+                                    <dt className='text-muted-foreground'>{edition.name}</dt>
+                                    <dd className='font-mono'>{layer.values[index]}</dd>
+                                </div>
+                            ))}
                         </dl>
                     </div>
                 ))}
@@ -131,14 +128,12 @@ export const HomePage: FC = () => (
 
         <section className='mt-16 flex flex-col gap-5 border-t border-border pt-10 sm:flex-row sm:items-center sm:justify-between'>
             <div>
-                <h2 className='text-xl font-semibold'>규칙의 단일 출처는 공통 컨벤션입니다.</h2>
-                <p className='mt-2 text-sm text-muted-foreground'>
-                    AI 작업 프로세스부터 프론트엔드, 백엔드, 보안과 Git 규칙까지 한곳에서 관리합니다.
-                </p>
+                <h2 className='text-xl font-semibold'>에디션마다 전체 룰을 볼 수 있습니다.</h2>
+                <p className='mt-2 text-sm text-muted-foreground'>코어와 공통·프론트엔드·백엔드·보안·Git 규칙을 에디션별 문서로 제공합니다.</p>
             </div>
             <Button asChild variant='outline' size='lg'>
-                <Link to='/convention'>
-                    공통 컨벤션 보기 <ArrowRight data-icon='inline-end' />
+                <Link to='/claude-code/rules/core'>
+                    Claude Code 코어 보기 <ArrowRight data-icon='inline-end' />
                 </Link>
             </Button>
         </section>

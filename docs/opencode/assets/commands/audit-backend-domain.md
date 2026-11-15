@@ -1,0 +1,7 @@
+---
+description: 백엔드 한 도메인의 계층 구조를 점검한다
+---
+
+`skill` 도구로 `llm-rules-audit-backend-domain` 를 불러와 아래 요청에 적용한다. 요청이 비어 있으면 현재 작업에 적용한다.
+
+$ARGUMENTS

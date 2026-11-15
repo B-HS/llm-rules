@@ -7,7 +7,7 @@ export type DocHeading = {
 export type Doc = {
     slug: string
     route: string
-    section: 'convention' | 'codex' | 'claude-code'
+    section: 'claude-code' | 'codex' | 'opencode' | 'pi'
     sectionLabel: string
     label: string
     title: string

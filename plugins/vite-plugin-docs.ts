@@ -24,56 +24,58 @@ type DocSource = {
     sectionLabel: string
     directory: string
     repositoryDirectory: string
-    indexRoute: string
     routePrefix: string
+    orderOffset: number
     order: string[]
     labels: Record<string, string>
+    tokens: Record<string, string>
 }
 
-const DOC_SOURCES: DocSource[] = [
-    {
-        section: 'codex',
-        sectionLabel: 'Codex',
-        directory: fileURLToPath(new URL('../docs/codex', import.meta.url)),
-        repositoryDirectory: 'docs/codex',
-        indexRoute: '/codex',
-        routePrefix: '/codex',
-        order: ['index', 'install', 'hooks', 'skills', 'agents-and-rules'],
-        labels: { index: '개요', install: '설치 CLI', hooks: 'Hooks', skills: 'Skills', 'agents-and-rules': 'Agents · Rules' },
-    },
-    {
-        section: 'claude-code',
-        sectionLabel: 'Claude Code',
-        directory: fileURLToPath(new URL('../docs/claudecode', import.meta.url)),
-        repositoryDirectory: 'docs/claudecode',
-        indexRoute: '/claude-code',
-        routePrefix: '/claude-code',
-        order: ['index', 'settings', 'hooks', 'commands', 'agents', 'enforcement'],
-        labels: { index: '개요', settings: 'Settings', hooks: 'Hooks', commands: 'Commands', agents: 'Agents', enforcement: 'Enforcement' },
-    },
-    {
-        section: 'convention',
-        sectionLabel: '공통 컨벤션',
-        directory: fileURLToPath(new URL('../docs/convention', import.meta.url)),
-        repositoryDirectory: 'docs/convention',
-        indexRoute: '/convention',
-        routePrefix: '',
-        order: ['index', 'ai-process', 'common', 'comments', 'security', 'git', 'frontend', 'fsd', 'query', 'backend', 'desktop'],
-        labels: {
-            index: '개요',
-            'ai-process': 'AI 프로세스',
-            common: '공통',
-            comments: '주석',
-            security: '보안',
-            git: 'Git · 커밋',
-            frontend: '프론트엔드',
-            fsd: 'FSD 아키텍처',
-            query: 'TanStack Query',
-            backend: '백엔드',
-            desktop: '데스크톱',
-        },
-    },
+const RULE_LABELS: Record<string, string> = {
+    core: '룰 · 코어',
+    common: '룰 · 공통',
+    comments: '룰 · 주석',
+    security: '룰 · 보안',
+    git: '룰 · Git',
+    frontend: '룰 · 프론트엔드',
+    fsd: '룰 · FSD',
+    query: '룰 · TanStack Query',
+    backend: '룰 · 백엔드',
+    desktop: '룰 · 데스크톱',
+}
+const EDITIONS: { section: DocSection; sectionLabel: string; folder: string; tokens: Record<string, string> }[] = [
+    { section: 'claude-code', sectionLabel: 'Claude Code', folder: 'claudecode', tokens: { RULES_DIR: '~/.claude/rules/llm-rules' } },
+    { section: 'codex', sectionLabel: 'Codex', folder: 'codex', tokens: { LLM_RULES_DIR: '~/.codex/llm-rules' } },
+    { section: 'opencode', sectionLabel: 'OpenCode', folder: 'opencode', tokens: { LLM_RULES_DIR: '~/.config/opencode/llm-rules' } },
+    { section: 'pi', sectionLabel: 'Pi', folder: 'pi', tokens: { LLM_RULES_DIR: '~/.pi/agent/llm-rules' } },
 ]
+
+const DOC_SOURCES: DocSource[] = EDITIONS.flatMap(({ section, sectionLabel, folder, tokens }) => [
+    {
+        section,
+        sectionLabel,
+        directory: fileURLToPath(new URL(`../docs/${folder}`, import.meta.url)),
+        repositoryDirectory: `docs/${folder}`,
+        routePrefix: `/${section}`,
+        orderOffset: 0,
+        order: ['index'],
+        labels: { index: '개요' },
+        tokens,
+    },
+    {
+        section,
+        sectionLabel,
+        directory: fileURLToPath(new URL(`../docs/${folder}/rules`, import.meta.url)),
+        repositoryDirectory: `docs/${folder}/rules`,
+        routePrefix: `/${section}/rules`,
+        orderOffset: 1,
+        order: Object.keys(RULE_LABELS),
+        labels: RULE_LABELS,
+        tokens,
+    },
+])
+
+const toRoute = (source: DocSource, slug: string) => (slug === 'index' ? source.routePrefix : `${source.routePrefix}/${slug}`)
 
 const VIRTUAL_ID = 'virtual:docs'
 const RESOLVED_ID = '\0' + VIRTUAL_ID
@@ -111,13 +113,9 @@ const rewriteLinks = (base: string, source: DocSource) => () => (tree: VisitTree
         const [pathPart, hash] = href.split('#')
         const resolved = path.posix.normalize(path.posix.join(source.repositoryDirectory, pathPart))
         if (/\.md$/.test(pathPart)) {
-            const targetSource = DOC_SOURCES.find(
-                (candidate) => resolved === `${candidate.repositoryDirectory}/index.md` || resolved.startsWith(`${candidate.repositoryDirectory}/`),
-            )
+            const targetSource = DOC_SOURCES.find((candidate) => path.posix.dirname(resolved) === candidate.repositoryDirectory)
             if (targetSource) {
-                const name = path.posix.basename(resolved, '.md')
-                const relativeRoute = name === 'index' ? targetSource.indexRoute : `${targetSource.routePrefix}/${name}`
-                const route = `${base.replace(/\/$/, '')}${relativeRoute}`
+                const route = `${base.replace(/\/$/, '')}${toRoute(targetSource, path.posix.basename(resolved, '.md'))}`
                 node.properties.href = hash ? `${route}#${hash}` : route
                 node.properties['data-doc-link'] = ''
                 return
@@ -133,7 +131,8 @@ const rewriteLinks = (base: string, source: DocSource) => () => (tree: VisitTree
 const buildDoc = async (file: string, base: string, source: DocSource): Promise<Doc> => {
     const slug = file.replace(/\.md$/, '')
     const markdown = await fs.readFile(path.join(source.directory, file), 'utf-8')
-    const { content } = matter(markdown)
+    const rendered = Object.entries(source.tokens).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, value), markdown)
+    const { content } = matter(rendered)
     const headings: DocHeading[] = []
 
     const processed = await unified()
@@ -154,13 +153,13 @@ const buildDoc = async (file: string, base: string, source: DocSource): Promise<
     const title = titleMatch ? titleMatch[1].trim() : slug
 
     return {
-        slug: `${source.section}-${slug}`,
-        route: slug === 'index' ? source.indexRoute : `${source.routePrefix}/${slug}`,
+        slug: `${source.routePrefix.slice(1).replaceAll('/', '-')}-${slug}`,
+        route: toRoute(source, slug),
         section: source.section,
         sectionLabel: source.sectionLabel,
         label: source.labels[slug] ?? title,
         title,
-        order: source.order.indexOf(slug),
+        order: source.orderOffset + source.order.indexOf(slug),
         html: String(processed),
         headings,
     }

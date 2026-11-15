@@ -1,60 +1,61 @@
 # Codex 에디션
 
-llm-rules의 기본 실행 환경입니다. 컨벤션 본문을 `AGENTS.md`로 주입하는 것에 더해 Codex config, Hooks, Skills, Custom Agents, Execpolicy Rules로 Subagent workflow와 기계적 강제를 제공합니다.
-
-## Claude Code 기능 대응
-
-| Claude Code             | Codex                              |
-| ----------------------- | ---------------------------------- |
-| `CLAUDE.md` import      | `AGENTS.md` 코어와 주제별 전문     |
-| main·subagent 모델 설정 | 사용자 main 설정 + `config.toml`의 agents 기본값 |
-| lifecycle hooks         | `hooks.json` command hooks         |
-| slash commands          | Skills                             |
-| subagents               | Custom Agents                      |
-| settings permissions    | Execpolicy Rules                   |
-| output style            | `AGENTS.md` 커뮤니케이션 규칙      |
+Codex 전용으로 다시 쓴 룰과 네이티브 자산이다. 다른 에디션과 결과물(코드·문서·커밋·응답)은 같고, 전달 방식과 작업 과정은 OpenAI 의 GPT-6 계열 권장에 맞췄다.
 
 ## 설치
 
-저장소를 클론한 환경에서는 다음 명령을 사용합니다.
-
 ```bash
-bun run install-codex
+bun run install-codex --global --all
+bun run install-codex --project --all
+bun run install-codex --global --all --dry-run
 ```
 
-클론 없이 설치할 때는 release 번들을 받는 설치기를 사용합니다.
+클론 없이 설치하려면 아래 명령을 쓴다. Bun 이 필요하다.
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install-codex.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/install-files/install.sh)" llm-rules codex --global --all
 ```
-
-두 설치기 모두 글로벌과 프로젝트 설치, 항목 선택, 기존 파일 백업과 멱등 갱신을 지원합니다.
 
 ## 구성
 
-| 자산          | 글로벌 위치                                        | 프로젝트 위치                                  | 역할                                                |
-| ------------- | -------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------- |
-| Instructions  | `~/.codex/AGENTS.md`, `~/.codex/llm-rules/`        | `AGENTS.md`, `.llm-rules/`                     | 압축 코어 자동 주입과 주제별 전문 참조              |
-| Config        | `~/.codex/config.toml`                             | `.codex/config.toml`                           | 사용자 main 보존, Terra medium subagent·동시 4개 기본값 |
-| Hooks         | `~/.codex/hooks.json`, `~/.codex/hooks/llm-rules/` | `.codex/hooks.json`, `.codex/hooks/llm-rules/` | 편집·세션 시점 guardrail                            |
-| Skills        | `~/.agents/skills/llm-rules-*/`                    | `.agents/skills/llm-rules-*/`                  | Subagent workflow·감사·검증·문서화                  |
-| Custom Agents | `~/.codex/agents/*.toml`                           | `.codex/agents/*.toml`                         | 구현·검증·조사 worker와 영역별 reviewer             |
-| Rules         | `~/.codex/rules/llm-rules.rules`                   | `.codex/rules/llm-rules.rules`                 | 명령의 allow·prompt·forbidden 정책                  |
+| 항목 | 설치 위치 | 역할 |
+| --- | --- | --- |
+| `instructions` | `~/.codex/AGENTS.md` · `~/.codex/llm-rules/` | [코어](./rules/core.md) 관리 블록과 조건부로 읽는 참조 문서 9개 |
+| `skills` | `~/.agents/skills/llm-rules-*` | 반복 절차 10종 |
+| `agents` | `~/.codex/agents/*.toml` | workflow 작업자 4종과 reviewer 7종 |
+| `hooks` | `~/.codex/hooks.json` · `~/.codex/hooks/llm-rules/` | 시크릿 차단, 편집 후 lint, 진행 중인 PROCESS 작업 주입 |
+| `config` | `~/.codex/config.toml` 의 `[agents]` | subagent 기본 모델과 동시 실행 수 |
+| `rules` | `~/.codex/rules/llm-rules.rules` | Execpolicy: 일반 Git 허용, force push · `rm -rf` 금지 |
+
+설치기는 `AGENTS.md` 의 관리 블록만 교체하고 `config.toml` · `hooks.json` 의 사용자 값을 보존한다. hook 은 새 세션의 `/hooks` 에서 신뢰 승인해야 실행된다.
+
+## 이 에디션에서 달라진 것
+
+| 변경 | 근거 |
+| --- | --- |
+| 코어를 23KB 에서 11KB 로 축소 | Codex 는 전역과 프로젝트 `AGENTS.md` 합산 32KiB 에서 읽기를 멈춘다. 본문은 간결히 두고 작업별 문서를 가리킨다 ([AGENTS.md](https://developers.openai.com/codex/guides/agents-md) · [Best practices](https://learn.chatgpt.com/docs/learn/best-practices)) |
+| "항상 전문을 읽는다"를 작업별 조건부 포인터로 교체 | 매 편집 전에 문서를 읽게 하면 컨텍스트를 태운다 ([Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)) |
+| workflow 질문 게이트 삭제, 완료 기준과 승인 없이 진행하는 일 명시 | 리뷰 대기 요구는 조기 중단을 부르고 강한 경계 문구는 계속해도 되는 곳에서 멈추게 한다 (같은 글 "Decision boundaries" · "Persistence", [Prompting best practices](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra) "Initiative and follow-through") |
+| 검증 규칙을 한 곳에만 기술, 통과 후 넓히는 조건 명시 | GPT-6 은 스스로 검증하므로 반복 지시는 불필요한 테스트를 만든다 (같은 문서 "Testing and verification") |
+| Skill 설명과 본문 축약 | 설명은 짧게 쓰고 언제 쓰는지 분명히 한다 (같은 글 "Better skills") |
+| agent TOML 의 `sandbox_mode` 제거 | custom agent 파일의 `sandbox_mode` 는 부모 설정을 덮지 못한다 ([Subagents](https://developers.openai.com/codex/subagents)) |
+| SessionStart matcher 에 `fork` 추가 | source 값은 `startup` · `resume` · `clear` · `compact` · `fork` 다 ([Hooks](https://developers.openai.com/codex/hooks)) |
+
+## 모델
+
+| 역할 | 모델 | reasoning effort |
+| --- | --- | --- |
+| main | 세션에서 고른 모델을 그대로 쓴다 | 세션 설정 |
+| 구현, 백엔드·Query reviewer | Sol | medium |
+| 보안·데스크톱 reviewer | Sol | high |
+| 조사, 검증, 보조 판정, 컨벤션·FSD·타입 reviewer | Luna | high |
+
+룰과 Skill 에는 모델 이름만 적는다. 실제 슬러그는 `scripts/install-codex.ts` 의 `DEFAULT_MODEL_SLUGS` 한 곳에 있고, 설치할 때 `--sol-model` · `--luna-model` 로 바꿀 수 있다.
 
 ## 확인
 
-새 Codex 세션에서 `/hooks`로 편집·세션 hook을 검토하고 신뢰 승인합니다. SessionStart hook은 공식 source인 startup·resume·clear·compact에서 workflow 선택 게이트와 첫 활성 PROCESS 작업만 주입합니다. handoff·PROCESS·prepare-new 재개는 각각의 Skill과 재개 프롬프트가 같은 질문을 먼저 수행합니다. 사용자가 선택하거나 `$llm-rules-subagent-workflow`를 직접 호출하면 Custom Agent로 위임하고, 선택하지 않으면 main이 직접 수행합니다. 일반 commit·push에는 llm-rules hook이나 추가 승인이 없으며 Execpolicy가 allow합니다. 모든 force push는 파괴적 예외로 계속 금지합니다.
-
 ```bash
-codex execpolicy check --pretty --rules ~/.codex/rules/llm-rules.rules -- git push --force origin main
-codex doctor --summary
+codex --ask-for-approval never "Summarize the current instructions."
 ```
 
-세부 문서:
-
-- [설치 CLI](./install.md)
-- [Hooks](./hooks.md)
-- [Skills](./skills.md)
-- [Custom Agents와 Rules](./agents-and-rules.md)
-
-공식 기준: [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) · [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) · [Skills](https://learn.chatgpt.com/docs/build-skills) · [Codex CLI와 개발자 명령](https://learn.chatgpt.com/docs/developer-commands?surface=cli) · [설정 레퍼런스](https://learn.chatgpt.com/docs/config-file/config-reference)
+새 세션에서 `/hooks` 로 hook 3종을 신뢰 승인하고 `/skills` 에서 `llm-rules-*` 10종을 확인한다.

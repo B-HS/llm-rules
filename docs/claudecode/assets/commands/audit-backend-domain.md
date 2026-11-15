@@ -4,11 +4,11 @@ argument-hint: <도메인명> (예: blog, mail)
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-백엔드 도메인 **`$ARGUMENTS`** 의 계층 구조 정합성을 `@docs/convention/backend.md` 기준으로 점검합니다. 인자가 비어 있으면 점검할 도메인명을 1줄로 되묻고 멈춥니다.
+백엔드 도메인 **`$ARGUMENTS`** 의 계층 구조 정합성을 `@{{RULES_DIR}}/backend.md` 기준으로 점검합니다. 인자가 비어 있으면 점검할 도메인명을 1줄로 되묻고 멈춥니다.
 
 기준 문서를 먼저 인지합니다.
-- @docs/convention/backend.md
-- @docs/convention/common.md
+- @{{RULES_DIR}}/backend.md
+- @{{RULES_DIR}}/common.md
 
 ## 1. 4곳 존재 확인 (계층형 구조)
 

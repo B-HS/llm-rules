@@ -5,6 +5,13 @@ import { GITHUB_URL } from '@/lib/docs'
 import { MobileNav } from './mobile-nav'
 import { ThemeToggle } from './theme-toggle'
 
+const EDITION_LINKS = [
+    { route: '/claude-code', label: 'Claude Code' },
+    { route: '/codex', label: 'Codex' },
+    { route: '/opencode', label: 'OpenCode' },
+    { route: '/pi', label: 'Pi' },
+]
+
 export const SiteHeader: FC = () => (
     <header className='sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md sm:px-6'>
         <MobileNav />
@@ -12,21 +19,16 @@ export const SiteHeader: FC = () => (
             <span className='text-muted-foreground'>&lt;/&gt;</span>
             <span>LLM Rules</span>
         </Link>
-        <span className='hidden text-xs text-muted-foreground sm:inline'>· Codex + Claude Code</span>
+        <span className='hidden text-xs text-muted-foreground sm:inline'>· 프로바이더별 룰</span>
         <nav className='ml-4 hidden items-center gap-1 md:flex' aria-label='주요 문서'>
-            <Link to='/codex' className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
-                Codex
-            </Link>
-            <Link
-                to='/claude-code'
-                className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
-                Claude Code
-            </Link>
-            <Link
-                to='/convention'
-                className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
-                컨벤션
-            </Link>
+            {EDITION_LINKS.map((edition) => (
+                <Link
+                    key={edition.route}
+                    to={edition.route}
+                    className='rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'>
+                    {edition.label}
+                </Link>
+            ))}
         </nav>
         <div className='ml-auto flex items-center gap-1'>
             <a
