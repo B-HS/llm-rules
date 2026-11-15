@@ -5,6 +5,16 @@
 
 ---
 
+## 작업: 4개 에디션 글로벌 설치 적용 (완료)
+
+사용자 요청 — 이 머신에 Claude Code · Codex · OpenCode · Pi 에디션을 글로벌로 설치한다.
+
+- [x] 1. 설치 전 상태 확인과 4개 설치기 실행 — `bun run install-<에디션> --global --all`, 백업 사용
+- [x] 2. 설치 결과 확인 — 설정 파일 파싱, 구형 구성 정리, OpenCode 실서비스의 플러그인·subagent 11종 등록 확인
+- [x] 3. 결과 기록 — `docs/quality-assurance/2026-11-15-provider-editions.md` 의 OpenCode subagent 항목 해소
+
+---
+
 ## 작업: 프로바이더별 룰 최적화 — Claude Code · Codex · OpenCode · Pi (완료)
 
 사용자 요청 — 공통 룰을 없애고 4개 프로바이더가 각자의 모델·하네스 권장사항에 맞춘 룰을 소유한다. 최종 결과물은 현재 룰과 같아야 하고, 중간 과정의 불필요한 루프·검증을 프로바이더 권장에 맞춰 정리한다. workflow 는 사용하지 않고 main 이 직접 수행한다.

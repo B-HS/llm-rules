@@ -11,6 +11,8 @@
 - [x] `BASE_PATH=/llm-rules/ bun run build` — 정적 경로 44개 생성, 에디션 간 링크와 토큰 치환 확인
 - [x] 설치기 4종을 임시 디렉터리에 실행 — 사용자 파일 보존, 구형 구성 정리, 재실행 시 변경 없음 확인
 - [x] OpenCode 2.1.2 격리 서비스에서 `opencode plugin list --builtin` 에 `llm-rules` 플러그인이 로드됨을 확인
+- [x] 2026-11-15 이 머신에 4개 에디션을 글로벌 설치 — `config.toml` · `hooks.json` · `settings.json` 파싱 통과, 사용자 agent·플러그인 보존, 구형 `CLAUDE.md` @import · `~/.claude/convention` · `~/AGENTS.md` 관리 블록 정리(각 `.bak` 보존)
+- [x] 글로벌 설치 후 OpenCode 실서비스에서 `llm-rules` 플러그인과 `llm-rules/*` subagent 11종 등록, 기존 `oh-pencode` 플러그인과 사용자 agent 유지, 로그에 관련 ERROR·WARN 0건 확인
 
 ## 테스트 부채
 
@@ -32,10 +34,7 @@
 
 ### OpenCode
 
-- [ ] subagent 목록에 `llm-rules/*` 11종이 보인다
-    - 생략 이유: 격리 서비스의 `opencode debug agents` 가 빈 목록을 돌려줘 판정할 수 없었다
-    - 재현 조건: `agents/llm-rules/<이름>.md`, frontmatter 는 `description` · `mode: subagent` · `permissions`
-    - 남은 위험: 중첩 디렉터리나 frontmatter 가 거부되면 subagent 가 등록되지 않는다. 이 경우 workflow Skill 만 영향을 받는다
+- [x] subagent 목록에 `llm-rules/*` 11종이 보인다 — 글로벌 설치 후 `opencode debug agents` 로 확인
 - [ ] 코드 파일에 시크릿 패턴을 쓰려 하면 플러그인이 도구 호출을 거부한다
 - [ ] 편집 후 도구 결과에 `[llm-rules]` lint 피드백이 붙는다
     - 생략 이유: 모델 호출이 필요하다. 플러그인은 도구 입력의 경로 키(`filePath` · `path` · `file_path` · `file`)와 결과의 `content` 문자열을 가정한다

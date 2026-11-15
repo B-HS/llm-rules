@@ -53,4 +53,4 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/B-HS/llm-rules/main/inst
 opencode plugin list --builtin
 ```
 
-`llm-rules` 플러그인이 격리된 설정의 OpenCode 2.1.2 서비스에서 로드되는 것까지 확인했다. 모델 호출이 필요한 차단·피드백 동작은 `scripts/guards.test.ts` 의 가짜 컨텍스트로 검증했고, 실제 세션 확인 항목은 `docs/quality-assurance/2026-11-15-provider-editions.md` 에 있다.
+OpenCode 2.1.2 실서비스에서 `llm-rules` 플러그인이 로드되고 `llm-rules/*` subagent 11종이 등록되는 것을 확인했다. 모델 호출이 필요한 차단·피드백 동작은 `scripts/guards.test.ts` 의 가짜 컨텍스트로 검증했고, 실제 세션 확인 항목은 `docs/quality-assurance/2026-11-15-provider-editions.md` 에 있다.
